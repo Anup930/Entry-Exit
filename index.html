@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gretex | Secure Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Modern Deep Gradient Background */
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      overflow: hidden;
+    }
+
+    /* Glassmorphism Card Effect */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 45px 40px;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .glass-card h2 {
+      color: #1e3c72;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 5px;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 13px;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #444;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: 0.3s;
+      background: #fdfdfd;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #2a5298;
+      box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+      background: #fff;
+    }
+
+    .btn-main {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: 0.3s;
+      box-shadow: 0 4px 10px rgba(30, 60, 114, 0.3);
+    }
+
+    .btn-main:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(30, 60, 114, 0.4);
+    }
+
+    .btn-main:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .text-link {
+      color: #2a5298;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+    
+    .text-link:hover {
+      text-decoration: underline;
+    }
+
+    .footer-action {
+      margin-top: 25px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    #loader, #resetLoader {
+      display: none;
+      color: #2a5298;
+      margin-top: 15px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #error-msg, #reset-error-msg {
+      color: #e74c3c;
+      margin-top: 15px;
+      font-size: 13px;
+      background: rgba(231, 76, 60, 0.1);
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    #success-msg {
+      color: #27ae60;
+      margin-top: 15px;
+      font-size: 13px;
+      background: rgba(39, 174, 96, 0.1);
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    /* Toggling display for forms */
+    #reset-box {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glass-card" id="login-box">
+    <h2>Gretex Portal</h2>
+    <div class="subtitle">Enter your credentials to continue</div>
+    
+    <div class="input-group">
+      <label>Email Address</label>
+      <input type="email" id="email" placeholder="e.g. name@gretex.com" required>
+    </div>
+    
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Enter your secure password" required>
+    </div>
+    
+    <button class="btn-main" id="loginBtn" onclick="login()">Sign In</button>
+    
+    <div id="loader">Verifying credentials...</div>
+    <div id="error-msg"></div>
+
+    <div class="footer-action">
+      Forgot your password? <span class="text-link" onclick="toggleForms('reset')">Reset it here</span>
+    </div>
+  </div>
+
+  <div class="glass-card" id="reset-box">
+    <h2>Reset Password</h2>
+    <div class="subtitle">Set a new password for your account</div>
+    
+    <div class="input-group">
+      <label>Registered Email Address</label>
+      <input type="email" id="resetEmail" placeholder="Enter your email ID" required>
+    </div>
+    
+    <div class="input-group">
+      <label>New Password</label>
+      <input type="password" id="newPassword" placeholder="Create a new password" required>
+    </div>
+
+    <div class="input-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="confirmPassword" placeholder="Type password again" required>
+    </div>
+    
+    <button class="btn-main" id="resetBtn" onclick="updatePassword()">Update Password</button>
+    
+    <div id="resetLoader">Updating system records...</div>
+    <div id="reset-error-msg"></div>
+    <div id="success-msg"></div>
+
+    <div class="footer-action">
+      Remembered your password? <span class="text-link" onclick="toggleForms('login')">Back to Sign In</span>
+    </div>
+  </div>
+
+  <script>
+    // 👇 YAHAN APNA SAME GOOGLE APPS SCRIPT URL DAALO 👇
+    const API_URL = "https://script.google.com/macros/s/AKfycbzCApKOAs8_24Ymwvz9qyVJkE00Wmc35szpe2_vHoAj3xt11WXAAY4QEWnzz22KxU3a-w/exec";
+
+    // Form Toggle Logic
+    function toggleForms(formType) {
+      const loginBox = document.getElementById("login-box");
+      const resetBox = document.getElementById("reset-box");
+      
+      // Clear previous error/success messages
+      document.getElementById("error-msg").style.display = "none";
+      document.getElementById("reset-error-msg").style.display = "none";
+      document.getElementById("success-msg").style.display = "none";
+
+      if (formType === 'reset') {
+        loginBox.style.display = "none";
+        resetBox.style.display = "block";
+      } else {
+        resetBox.style.display = "none";
+        loginBox.style.display = "block";
+      }
+    }
+
+    // Login Function
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const pass = document.getElementById("password").value;
+      const errorMsg = document.getElementById("error-msg");
+      const loader = document.getElementById("loader");
+      const loginBtn = document.getElementById("loginBtn");
+      
+      errorMsg.style.display = "none";
+      
+      if(email === "" || pass === "") {
+        errorMsg.innerHTML = "Please enter both Email and Password.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      loader.style.display = "block";
+      loginBtn.disabled = true;
+      loginBtn.innerText = "Authenticating...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "login", email: email, password: pass })
+        });
+
+        const data = await response.json();
+        
+        loader.style.display = "none";
+        loginBtn.disabled = false;
+        loginBtn.innerText = "Sign In";
+
+        if(data.success) {
+          sessionStorage.setItem("userName", data.userName);
+          sessionStorage.setItem("userRole", data.role);
+          sessionStorage.setItem("userDept", data.department);
+          
+          if(data.role === "Admin") {
+            window.location.href = "hr.html"; 
+          } else {
+            window.location.href = "department.html"; 
+          }
+        } else {
+          errorMsg.innerHTML = data.message;
+          errorMsg.style.display = "block";
+        }
+      } catch (error) {
+        loader.style.display = "none";
+        loginBtn.disabled = false;
+        loginBtn.innerText = "Sign In";
+        errorMsg.innerHTML = "Network error. Please try again.";
+        errorMsg.style.display = "block";
+      }
+    }
+
+    // Reset Password Function
+    async function updatePassword() {
+      const email = document.getElementById("resetEmail").value.trim();
+      const newPass = document.getElementById("newPassword").value;
+      const confirmPass = document.getElementById("confirmPassword").value;
+      
+      const errorMsg = document.getElementById("reset-error-msg");
+      const successMsg = document.getElementById("success-msg");
+      const loader = document.getElementById("resetLoader");
+      const resetBtn = document.getElementById("resetBtn");
+      
+      errorMsg.style.display = "none";
+      successMsg.style.display = "none";
+      
+      if(email === "" || newPass === "" || confirmPass === "") {
+        errorMsg.innerHTML = "All fields are required.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      if (newPass !== confirmPass) {
+        errorMsg.innerHTML = "Passwords do not match.";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      loader.style.display = "block";
+      resetBtn.disabled = true;
+      resetBtn.innerText = "Processing...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "resetPassword", email: email, newPassword: newPass })
+        });
+
+        const data = await response.json();
+        
+        loader.style.display = "none";
+        resetBtn.disabled = false;
+        resetBtn.innerText = "Update Password";
+
+        if(data.success) {
+          successMsg.innerHTML = data.message;
+          successMsg.style.display = "block";
+          
+          // Clear inputs after success
+          document.getElementById("resetEmail").value = "";
+          document.getElementById("newPassword").value = "";
+          document.getElementById("confirmPassword").value = "";
+        } else {
+          errorMsg.innerHTML = data.message;
+          errorMsg.style.display = "block";
+        }
+      } catch (error) {
+        loader.style.display = "none";
+        resetBtn.disabled = false;
+        resetBtn.innerText = "Update Password";
+        errorMsg.innerHTML = "System error. Could not update password.";
+        errorMsg.style.display = "block";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Department Dashboard - Gretex</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Roboto', sans-serif; margin: 0; display: flex; background-color: #f4f7f6; height: 100vh; overflow: hidden; }
+    
+    .sidebar { width: 250px; background-color: #2c3e50; color: white; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #34495e; text-align: center; }
+    .nav-links { flex: 1; padding: 20px 0; overflow-y: auto; }
+    .nav-links div { padding: 15px 20px; cursor: pointer; transition: 0.3s; }
+    .nav-links div:hover { background-color: #34495e; }
+    .nav-links div.active { background-color: #34495e; border-left: 4px solid #3498db; }
+    .user-info { padding: 20px; font-size: 14px; text-align: center; border-top: 1px solid #34495e; }
+    .logout-btn { background-color: #e74c3c; color: white; border: none; padding: 10px; width: 80%; margin: 10px auto; border-radius: 5px; cursor: pointer; display: block; }
+    
+    .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+    .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); max-width: 1100px; margin-bottom: 30px; }
+    h2 { margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th { background-color: #f0f4f8; padding: 12px; text-align: left; border-bottom: 2px solid #ccc; color: #333; font-size: 14px; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; color: #555; vertical-align: middle; }
+    
+    .status-Pending { color: #d35400; font-weight: bold; }
+    .status-Completed { color: #27ae60; font-weight: bold; }
+    
+    .action-btn { background-color: #0056b3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; transition: 0.3s; }
+    .action-btn:hover { background-color: #004494; }
+    .submit-btn { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; width: 100%; margin-top: 15px; }
+    .submit-btn:hover { background-color: #218838; }
+    .submit-btn:disabled { background-color: #8fdfa0; cursor: not-allowed; }
+    
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+    .filter-btn { padding: 8px 15px; border: 1px solid #ccc; background: white; border-radius: 20px; cursor: pointer; font-size: 13px; }
+    .filter-btn.active { background: #0056b3; color: white; border-color: #0056b3; }
+    .back-btn { margin-bottom: 15px; padding: 8px 12px; background: #eee; border: none; cursor: pointer; border-radius: 4px; color: #333; font-weight: 500;}
+    .back-btn:hover { background: #ddd; }
+
+    .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+    .form-group label { font-size: 14px; color: #555; margin-bottom: 5px; font-weight: 500; }
+    .form-group textarea, .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; width: 100%; box-sizing: border-box; }
+    
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+    .close-btn { cursor: pointer; font-size: 20px; font-weight: bold; color: #888; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="sidebar-header" id="sidebarTitle">Department</div>
+    <div class="nav-links">
+      <div id="nav-dashboard" class="active" onclick="backToEmpList()">Department Tasks</div>
+    </div>
+    <div class="user-info">
+      <span id="displayUser">Loading...</span><br><br>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="card">
+      <h2>Department Tasks Overview</h2>
+      
+      <div id="dept-empList">
+        <p style="font-size: 14px; color: #666; margin-top:-5px;">Select an employee to view and manage assigned tasks.</p>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr><th>Employee Name</th><th>Total Tasks</th><th>Pending Tasks</th><th>Completed</th><th>Action</th></tr>
+            </thead>
+            <tbody id="empTableBody">
+              <tr><td colspan="5" style="text-align: center;">Fetching assignments...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="dept-taskList" style="display: none;">
+        <button class="back-btn" onclick="backToEmpList()">← Back to Employee List</button>
+        <h3 id="taskViewEmpName" style="margin-top: 0;">Tasks for: </h3>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterTasks('All', this)">All</button>
+          <button class="filter-btn" onclick="filterTasks('Pending', this)">Pending</button>
+          <button class="filter-btn" onclick="filterTasks('Completed', this)">Completed</button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead><tr><th>Process Type</th><th>Task Description</th><th>Target Date</th><th>Status</th><th>Action / Remarks</th></tr></thead>
+            <tbody id="taskTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="taskModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header"><h3 style="margin: 0; color: #333;">Update Task Status</h3><span class="close-btn" onclick="closeModal()">&times;</span></div>
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #e9ecef;">
+        <p style="margin: 0 0 5px 0; font-size: 13px; color: #666;"><strong>Employee:</strong> <span id="modalEmpName" style="color: #333;"></span></p>
+        <p style="margin: 0; font-size: 13px; color: #666;"><strong>Task:</strong> <span id="modalTaskDesc" style="color: #333;"></span></p>
+      </div>
+      <form id="updateTaskForm" onsubmit="saveTaskUpdate(event)">
+        <input type="hidden" id="modalTxnId">
+        <div class="form-group"><label>Update Status to *</label><select id="modalStatus" required><option value="Completed">Mark as Completed</option><option value="Pending">Keep as Pending</option></select></div>
+        <div class="form-group"><label>Official Remarks / Notes</label><textarea id="modalRemarks" rows="3" placeholder="Enter completion notes, asset IDs, or reference numbers here..."></textarea></div>
+        <button type="submit" class="submit-btn" id="modalSaveBtn">Confirm & Save Update</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const userName = sessionStorage.getItem("userName");
+    const userRole = sessionStorage.getItem("userRole");
+    const userDept = sessionStorage.getItem("userDept");
+    
+    if (!userName || !userDept) { alert("Session expired! Please login again."); window.location.href = "index.html"; } 
+    else { document.getElementById("displayUser").innerText = "Welcome, " + userName; document.getElementById("sidebarTitle").innerText = userDept + " Portal"; }
+    function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
+
+    // 👇 YAHAN APNA SAME GAS URL DAALO 👇
+    const API_URL = "https://script.google.com/macros/s/AKfycbzCApKOAs8_24Ymwvz9qyVJkE00Wmc35szpe2_vHoAj3xt11WXAAY4QEWnzz22KxU3a-w/exec";
+    
+    let globalDeptTasks = []; 
+    let currentViewEmp = "";
+
+    async function fetchDepartmentData() {
+      try {
+        // NAYA: userName bhi pass ho raha hai filtering ke liye
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getDepartmentTasks", department: userDept, userName: userName }) });
+        const result = await res.json();
+        if (result.success) {
+          globalDeptTasks = result.data; renderEmpList();
+          if(currentViewEmp) renderTaskList(document.querySelector('.filter-btn.active').innerText);
+        } else { console.error("Failed to load tasks"); }
+      } catch (error) { document.getElementById("empTableBody").innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">System Error communicating with server.</td></tr>'; }
+    }
+
+    function renderEmpList() {
+      const tbody = document.getElementById("empTableBody");
+      if (globalDeptTasks.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No active tasks assigned to your department.</td></tr>'; return; }
+      const groupedData = {};
+      globalDeptTasks.forEach(t => {
+        if(!groupedData[t.empName]) groupedData[t.empName] = { total: 0, pending: 0, completed: 0, tasks: [] };
+        groupedData[t.empName].total++;
+        if(t.status === 'Pending') groupedData[t.empName].pending++;
+        if(t.status === 'Completed') groupedData[t.empName].completed++;
+        groupedData[t.empName].tasks.push(t);
+      });
+      let html = "";
+      for (const [empName, data] of Object.entries(groupedData)) {
+        html += `<tr><td><strong>${empName}</strong></td><td>${data.total}</td><td style="color: ${data.pending > 0 ? '#d35400' : '#27ae60'}; font-weight:bold;">${data.pending}</td><td style="color: #27ae60;">${data.completed}</td><td><button class="action-btn" onclick="openEmployeeTasks('${empName.replace(/'/g, "\\'")}')">View & Update Tasks</button></td></tr>`;
+      }
+      tbody.innerHTML = html;
+    }
+
+    function openEmployeeTasks(empName) {
+      currentViewEmp = empName;
+      document.getElementById("dept-empList").style.display = "none";
+      document.getElementById("dept-taskList").style.display = "block";
+      document.getElementById("taskViewEmpName").innerText = "Tasks for: " + empName;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.filter-btn').classList.add('active'); 
+      renderTaskList("All");
+    }
+
+    function backToEmpList() { document.getElementById("dept-empList").style.display = "block"; document.getElementById("dept-taskList").style.display = "none"; currentViewEmp = ""; }
+    function filterTasks(status, btnElement) { document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btnElement.classList.add('active'); renderTaskList(status); }
+
+    function renderTaskList(filterStatus) {
+      const tbody = document.getElementById("taskTableBody");
+      const empTasks = globalDeptTasks.filter(t => t.empName === currentViewEmp);
+      let html = "";
+      empTasks.forEach(t => {
+        if(filterStatus === "All" || t.status === filterStatus) {
+          let actionHtml = t.status === 'Pending' 
+            ? `<button class="action-btn" onclick="openModal('${t.txnId}', '${t.empName.replace(/'/g, "\\'")}', '${t.desc.replace(/'/g, "\\'")}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update Progress</button>`
+            : `<div><span style="color:#888;">Done ✓</span><br><span style="font-size:12px; color:#666;">Note: ${t.remarks || '-'}</span></div>`;
+          html += `<tr><td><span style="background:#e9ecef; padding:3px 8px; border-radius:12px; font-size:12px;">${t.reportType}</span></td><td>${t.desc}</td><td>${t.targetDate}</td><td class="${t.status==='Completed'?'status-Completed':'status-Pending'}">${t.status}</td><td>${actionHtml}</td></tr>`;
+        }
+      });
+      tbody.innerHTML = html === "" ? `<tr><td colspan="5" style="text-align:center;">No ${filterStatus.toLowerCase()} tasks match this filter.</td></tr>` : html;
+    }
+
+    function openModal(txnId, empName, taskDesc, currentStatus, currentRemarks) {
+      document.getElementById("modalTxnId").value = txnId; document.getElementById("modalEmpName").innerText = empName; document.getElementById("modalTaskDesc").innerText = taskDesc;
+      document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; document.getElementById("modalRemarks").value = currentRemarks || "";
+      document.getElementById("taskModal").style.display = "flex";
+    }
+
+    function closeModal() { document.getElementById("taskModal").style.display = "none"; }
+
+    async function saveTaskUpdate(e) {
+      e.preventDefault();
+      const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Processing Update..."; btn.disabled = true;
+      const updateData = { txnId: document.getElementById("modalTxnId").value, status: document.getElementById("modalStatus").value, remarks: document.getElementById("modalRemarks").value };
+      try {
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) });
+        const result = await res.json();
+        if(result.success) { closeModal(); await fetchDepartmentData(); } else { alert("Update Failed: " + result.message); }
+      } catch (error) { alert("System Error. Check your connection."); } finally { btn.innerText = "Confirm & Save Update"; btn.disabled = false; }
+    }
+    
+    window.onload = function() { fetchDepartmentData(); };
+  </script>
+</body>
+</html>
