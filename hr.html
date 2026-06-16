@@ -35,7 +35,7 @@
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 14px; color: #555; margin-bottom: 5px; font-weight: 500; }
-    .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
+    .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
     .full-width { grid-column: span 2; }
     
     .btn { padding: 10px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: 0.3s; }
@@ -69,6 +69,20 @@
     .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #3498db; }
     .stat-card h3 { margin: 0; font-size: 13px; color: #7f8c8d; text-transform: uppercase; }
     .stat-card .value { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 10px 0 0 0; }
+
+    .emp-summary-card { background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #2c3e50; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; }
+    .emp-details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; flex: 1; }
+    .emp-detail-item { font-size: 14px; color: #333; }
+    .emp-detail-item strong { display: block; font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .task-stats-container { display: flex; gap: 10px; }
+    .task-stat-box { background: #f8f9fa; padding: 12px 15px; border-radius: 6px; text-align: center; border: 1px solid #eee; min-width: 90px; }
+    .task-stat-box .count { font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .task-stat-box .label { font-size: 11px; color: #555; text-transform: uppercase; font-weight: 600; margin-top: 4px; }
+    .dept-group { margin-bottom: 25px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #eef2f5; }
+    .dept-header { background: #f0f4f8; padding: 15px 20px; border-bottom: 2px solid #dde4eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .dept-header h4 { margin: 0; color: #2c3e50; font-size: 16px; font-weight: 600; }
+    .dept-stats { display: flex; gap: 10px; font-size: 12px; }
+    .dept-stat-badge { padding: 5px 10px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
@@ -99,21 +113,11 @@
       </div>
       
       <div class="dashboard-cards">
-        <div class="stat-card" style="border-color: #3498db;">
-          <h3>Total Employees</h3><p class="value" id="dash-tot-emp">...</p>
-        </div>
-        <div class="stat-card" style="border-color: #2ecc71;">
-          <h3>Active Staff</h3><p class="value" id="dash-act-emp">...</p>
-        </div>
-        <div class="stat-card" style="border-color: #9b59b6;">
-          <h3>Total Tasks</h3><p class="value" id="dash-tot-task">...</p>
-        </div>
-        <div class="stat-card" style="border-color: #e67e22;">
-          <h3>Pending Tasks</h3><p class="value" id="dash-pen-task">...</p>
-        </div>
-        <div class="stat-card" style="border-color: #27ae60;">
-          <h3>Completed</h3><p class="value" id="dash-com-task">...</p>
-        </div>
+        <div class="stat-card" style="border-color: #3498db;"><h3>Total Employees</h3><p class="value" id="dash-tot-emp">...</p></div>
+        <div class="stat-card" style="border-color: #2ecc71;"><h3>Active Staff</h3><p class="value" id="dash-act-emp">...</p></div>
+        <div class="stat-card" style="border-color: #9b59b6;"><h3>Total Tasks</h3><p class="value" id="dash-tot-task">...</p></div>
+        <div class="stat-card" style="border-color: #e67e22;"><h3>Pending Tasks</h3><p class="value" id="dash-pen-task">...</p></div>
+        <div class="stat-card" style="border-color: #27ae60;"><h3>Completed</h3><p class="value" id="dash-com-task">...</p></div>
       </div>
 
       <div class="form-grid">
@@ -240,18 +244,18 @@
     </div>
 
     <div id="sec-viewTasks" class="section">
-      <div class="card">
-        <div class="section-header" style="margin-bottom: 5px;">
+      <div class="card" style="max-width: 1200px;">
+        <div class="section-header" style="margin-bottom: 15px;">
           <h2>Master Task Tracker</h2>
           <button class="btn btn-export" onclick="downloadTrackerPDF()">📥 Download PDF</button>
         </div>
         
-        <div class="form-group" style="max-width: 400px; margin-bottom: 15px;">
+        <div class="form-group" style="max-width: 400px; margin-bottom: 20px;">
           <label>Select Employee</label>
           <select id="viewEmpSelect" onchange="fetchEmployeeTasks()"><option value="">Loading...</option></select>
         </div>
         
-        <div class="filter-bar" id="trackerFilters" style="display:none;">
+        <div class="filter-bar" id="trackerFilters" style="display:none; margin-bottom: 20px;">
           <div class="form-group" style="margin-bottom:0;"><label>Process</label>
             <select id="filterReportType" onchange="renderTrackerTasks()"><option value="All">All</option><option value="Entry">Entry</option><option value="Exit">Exit</option></select>
           </div>
@@ -263,12 +267,15 @@
           </div>
         </div>
 
-        <div style="overflow-x: auto;">
-          <table id="tasksTable">
-            <thead><tr><th>Department</th><th>Type</th><th>Task Description</th><th>Target Date</th><th>Status</th><th>Updated By</th></tr></thead>
-            <tbody id="tasksTableBody"><tr><td colspan="6" style="text-align: center;">Select an employee to view progress.</td></tr></tbody>
-          </table>
+        <div id="trackerSummary" style="display:none;"></div>
+        <div id="trackerTasksContainer">
+          <div style="text-align: center; padding: 30px; color: #666; background: #f8f9fa; border-radius: 8px;">Select an employee to view progress.</div>
         </div>
+
+        <table id="pdfTasksTable" style="display: none;">
+          <thead><tr><th>Department</th><th>Task Description</th><th>Target Date</th><th>Status</th><th>Updated By</th><th>Updated At</th></tr></thead>
+          <tbody id="pdfTasksTableBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -358,7 +365,15 @@
           <label>Status</label>
           <select id="modalStatus" required><option value="Pending">Pending</option><option value="Completed">Completed</option></select>
         </div>
-        <div class="form-group" style="margin-top: 15px;"><label>Remarks</label><textarea id="modalRemarks" rows="3" placeholder="Add comments here..."></textarea></div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label>Remarks</label>
+          <textarea id="modalRemarks" rows="3" placeholder="Add comments here..."></textarea>
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Upload Attachment (Optional)</label>
+          <input type="file" id="modalAttachment" style="padding: 8px; border: 1px dashed #ccc; background: #fafafa;">
+          <small style="color: #888; font-size: 11px;">Max size ~5MB recommended.</small>
+        </div>
         <button type="submit" class="btn btn-primary" id="modalSaveBtn">Save Changes</button>
       </form>
     </div>
@@ -402,14 +417,12 @@
       return target < today;
     }
 
-    // Google Apps Script URL
     const API_URL = "https://script.google.com/macros/s/AKfycbzCApKOAs8_24Ymwvz9qyVJkE00Wmc35szpe2_vHoAj3xt11WXAAY4QEWnzz22KxU3a-w/exec";
     
     let globalEmployeesData = []; 
     let globalDepartmentTasks = []; 
     let globalTrackerTasks = []; 
 
-    // --- DASHBOARD LOGIC ---
     async function loadDashboardData() {
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getAnalytics" }) });
@@ -492,26 +505,46 @@
     }
 
     async function fetchEmployeeTasks() {
-      const empId = document.getElementById("viewEmpSelect").value, tbody = document.getElementById("tasksTableBody");
+      const empId = document.getElementById("viewEmpSelect").value;
+      const container = document.getElementById("trackerTasksContainer");
+      const summary = document.getElementById("trackerSummary");
       const filters = document.getElementById("trackerFilters");
+      
       if(!empId) { 
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Select an employee to view progress.</td></tr>'; 
-        filters.style.display = "none"; return; 
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #666; background: #f8f9fa; border-radius: 8px;">Select an employee to view progress.</div>'; 
+        summary.style.display = "none";
+        filters.style.display = "none"; 
+        return; 
       }
+      
       filters.style.display = "flex";
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Retrieving data...</td></tr>';
+      container.innerHTML = '<div style="text-align: center; padding: 30px; color: #333;">Retrieving data...</div>';
+      summary.style.display = "none";
+      
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getEmployeeTasks", empId: empId }) });
         const result = await res.json();
         if (result.success && result.data.length > 0) {
           globalTrackerTasks = result.data;
           renderTrackerTasks();
-        } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No tasks identified.</td></tr>'; globalTrackerTasks = [];}
-      } catch (e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">System error loading tasks.</td></tr>'; }
+        } else { 
+          container.innerHTML = '<div style="text-align: center; padding: 30px; color: #e74c3c;">No tasks identified for this employee.</div>'; 
+          globalTrackerTasks = [];
+        }
+      } catch (e) { 
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: red;">System error loading tasks.</div>'; 
+      }
     }
 
     function renderTrackerTasks() {
-      const tbody = document.getElementById("tasksTableBody");
+      const container = document.getElementById("trackerTasksContainer");
+      const summaryContainer = document.getElementById("trackerSummary");
+      const empId = document.getElementById("viewEmpSelect").value;
+
+      if(!empId || globalTrackerTasks.length === 0) return;
+
+      const empInfo = globalEmployeesData.find(e => e.empId === empId) || {};
+      
       const rType = document.getElementById("filterReportType").value;
       const status = document.getElementById("filterStatus").value;
       const dept = document.getElementById("filterDept").value;
@@ -523,30 +556,212 @@
       });
 
       if(filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No tasks match criteria.</td></tr>'; return;
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #666;">No tasks match criteria.</div>'; 
+        return;
       }
 
-      tbody.innerHTML = filtered.map(t => {
-        let isOd = checkIsOverdue(t.targetDate) && t.status === 'Pending';
-        let statusClass = t.status === 'Completed' ? 'status-Completed' : (isOd ? 'status-Overdue' : 'status-Pending');
-        let statusText = isOd ? 'Pending (Overdue)' : t.status;
-        return `<tr><td>${t.dept}</td><td>${t.reportType}</td><td>${t.desc}</td><td style="${isOd?'color:#c0392b':''}">${t.targetDate}</td><td class="${statusClass}">${statusText}</td><td>${t.updatedBy || '-'}</td></tr>`;
-      }).join('');
+      let overall = { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 };
+      let deptData = {};
+      let processTypes = [...new Set(filtered.map(t => t.reportType))].join(' & ');
+
+      filtered.forEach(t => {
+        overall.total++;
+        let isOd = checkIsOverdue(t.targetDate); 
+
+        if (t.status === 'Completed') {
+          overall.completed++;
+          if(isOd) overall.overdueCompleted++;
+        } else {
+          overall.pending++;
+          if(isOd) overall.overduePending++;
+        }
+
+        if (!deptData[t.dept]) {
+          deptData[t.dept] = { tasks: [], stats: { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 } };
+        }
+        
+        deptData[t.dept].tasks.push(t);
+        deptData[t.dept].stats.total++;
+        if (t.status === 'Completed') {
+          deptData[t.dept].stats.completed++;
+          if(isOd) deptData[t.dept].stats.overdueCompleted++;
+        } else {
+          deptData[t.dept].stats.pending++;
+          if(isOd) deptData[t.dept].stats.overduePending++;
+        }
+      });
+
+      const sortedDepts = Object.keys(deptData).sort();
+      let pdfRows = "";
+      let tasksHtml = "";
+
+      sortedDepts.forEach(dName => {
+        const dInfo = deptData[dName];
+
+        tasksHtml += `
+          <div class="dept-group">
+            <div class="dept-header">
+              <h4>${dName} Department</h4>
+              <div class="dept-stats">
+                <span class="dept-stat-badge" style="background:#e9ecef; color:#333;">Total: ${dInfo.stats.total}</span>
+                <span class="dept-stat-badge" style="background:#e8f8f5; color:#27ae60;">Done: ${dInfo.stats.completed}</span>
+                <span class="dept-stat-badge" style="background:#fef5e7; color:#d35400;">Pending: ${dInfo.stats.pending}</span>
+                <span class="dept-stat-badge" style="background:#fdedec; color:#c0392b;">Overdue: ${dInfo.stats.overduePending + dInfo.stats.overdueCompleted} (P:${dInfo.stats.overduePending} | C:${dInfo.stats.overdueCompleted})</span>
+              </div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table style="margin-top:0; border-top:none;">
+                <thead><tr><th style="width:45%">Task Description</th><th style="width:15%">Target Date</th><th style="width:15%">Status</th><th style="width:25%">Updated By & At</th></tr></thead>
+                <tbody>
+        `;
+
+        dInfo.tasks.forEach(t => {
+          let isOd = checkIsOverdue(t.targetDate) && t.status === 'Pending';
+          let statusClass = t.status === 'Completed' ? 'status-Completed' : (isOd ? 'status-Overdue' : 'status-Pending');
+          let statusText = isOd ? 'Pending (Overdue)' : t.status;
+          
+          let statusTextPdf = (isOd && t.status === 'Pending') ? 'Pending (Overdue)' : t.status;
+          pdfRows += `<tr><td>${t.dept}</td><td>${t.desc}</td><td>${t.targetDate}</td><td>${statusTextPdf}</td><td>${t.updatedBy || '-'}</td><td>${t.actualDate || '-'}</td></tr>`;
+          
+          tasksHtml += `<tr>
+            <td>${t.desc}</td>
+            <td style="${isOd?'color:#c0392b; font-weight:500;':''}">${t.targetDate}</td>
+            <td class="${statusClass}">${statusText}</td>
+            <td>
+              <span style="font-weight:500;">👤 ${t.updatedBy || '-'}</span>
+              ${t.actualDate ? `<br><span style="font-size:11px; color:#2980b9; font-weight:500;">📅 ${t.actualDate}</span>` : ''}
+              ${t.remarks ? `<br><span style="font-size:11px; color:#7f8c8d; display:inline-block; margin-top:3px;">📝 ${t.remarks}</span>` : ''}
+              ${t.attachmentUrl ? `<br><a href="${t.attachmentUrl}" target="_blank" style="font-size:11px; color:#0056b3; font-weight:500; text-decoration:none; display:inline-block; margin-top:3px;">📎 View File</a>` : ''}
+            </td>
+          </tr>`;
+        });
+
+        tasksHtml += `</tbody></table></div></div>`;
+      });
+
+      document.getElementById("pdfTasksTableBody").innerHTML = pdfRows;
+      container.innerHTML = tasksHtml;
+
+      let summaryHtml = `
+        <div class="emp-summary-card">
+          <div class="emp-details-grid">
+            <div class="emp-detail-item"><strong>Employee Name</strong>${empInfo.name || '-'}</div>
+            <div class="emp-detail-item"><strong>Company</strong>${empInfo.company || '-'}</div>
+            <div class="emp-detail-item"><strong>Process Type</strong><span style="color:#2980b9; font-weight:600;">${processTypes || '-'}</span></div>
+            <div class="emp-detail-item"><strong>Department</strong>${empInfo.department || '-'}</div>
+            <div class="emp-detail-item"><strong>Designation</strong>${empInfo.designation || '-'}</div>
+            <div class="emp-detail-item"><strong>HOD Name</strong>${empInfo.hod || '-'}</div>
+          </div>
+          <div class="task-stats-container">
+            <div class="task-stat-box"><div class="count" style="color:#2c3e50;">${overall.total}</div><div class="label">Total</div></div>
+            <div class="task-stat-box" style="border-bottom: 3px solid #27ae60;"><div class="count" style="color:#27ae60;">${overall.completed}</div><div class="label">Done</div></div>
+            <div class="task-stat-box" style="border-bottom: 3px solid #f39c12;"><div class="count" style="color:#f39c12;">${overall.pending}</div><div class="label">Pending</div></div>
+            <div class="task-stat-box" style="border-bottom: 3px solid #e74c3c; background:#fdf3f2;">
+              <div class="count" style="color:#e74c3c;">${overall.overduePending + overall.overdueCompleted}</div>
+              <div class="label">Overdue</div>
+              <div style="font-size:10px; color:#666; margin-top:2px;">(P:${overall.overduePending} | C:${overall.overdueCompleted})</div>
+            </div>
+          </div>
+        </div>
+      `;
+      summaryContainer.innerHTML = summaryHtml;
+      summaryContainer.style.display = "block";
     }
 
     function downloadTrackerPDF() {
       if(globalTrackerTasks.length === 0) { alert("No data to download!"); return; }
-      const empName = document.getElementById("viewEmpSelect").options[document.getElementById("viewEmpSelect").selectedIndex].text;
+
+      const empId = document.getElementById("viewEmpSelect").value;
+      const empInfo = globalEmployeesData.find(e => e.empId === empId) || {};
+      const empName = empInfo.name || document.getElementById("viewEmpSelect").options[document.getElementById("viewEmpSelect").selectedIndex].text;
+
+      const rType = document.getElementById("filterReportType").value;
+      const status = document.getElementById("filterStatus").value;
+      const dept = document.getElementById("filterDept").value;
+
+      let filtered = globalTrackerTasks.filter(t => {
+        return (rType === "All" || t.reportType === rType) &&
+               (status === "All" || t.status === status) &&
+               (dept === "All" || t.dept === dept);
+      });
+
+      if(filtered.length === 0) { alert("No data match the current filters!"); return; }
+
+      let processTypes = [...new Set(filtered.map(t => t.reportType))].join(' & ');
+      let overall = { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 };
+      let deptData = {};
       
-      const { jsPDF } = window.jspdf; const doc = new jsPDF();
-      doc.text("Task Tracker Report - " + empName, 14, 15);
+      filtered.forEach(t => {
+        overall.total++;
+        let isOd = checkIsOverdue(t.targetDate);
+        if (t.status === 'Completed') {
+          overall.completed++;
+          if(isOd) overall.overdueCompleted++;
+        } else {
+          overall.pending++;
+          if(isOd) overall.overduePending++;
+        }
+
+        if (!deptData[t.dept]) {
+          deptData[t.dept] = { total: 0, completed: 0, pending: 0, overdue: 0 };
+        }
+        deptData[t.dept].total++;
+        if (t.status === 'Completed') {
+          deptData[t.dept].completed++;
+        } else {
+          deptData[t.dept].pending++;
+          if(isOd) deptData[t.dept].overdue++;
+        }
+      });
+
+      const { jsPDF } = window.jspdf; 
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Master Task Tracker Report", 14, 15);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Employee Name: ${empName}`, 14, 25);
+      doc.text(`Company: ${empInfo.company || '-'}`, 14, 30);
+      doc.text(`Process Type: ${processTypes || '-'}`, 14, 35);
+
+      doc.text(`Department: ${empInfo.department || '-'}`, 105, 25);
+      doc.text(`Designation: ${empInfo.designation || '-'}`, 105, 30);
+      doc.text(`HOD Name: ${empInfo.hod || '-'}`, 105, 35);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Overall Task Summary:", 14, 45);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total: ${overall.total}   |   Done: ${overall.completed}   |   Pending: ${overall.pending}   |   Overdue: ${overall.overduePending + overall.overdueCompleted}`, 14, 52);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Department-wise Summary:", 14, 62);
+      doc.setFont("helvetica", "normal");
+
+      let yPos = 69;
+      const sortedDepts = Object.keys(deptData).sort();
       
+      sortedDepts.forEach(deptName => {
+        const d = deptData[deptName];
+        doc.text(`${deptName}:  Total: ${d.total}  |  Done: ${d.completed}  |  Pending: ${d.pending}  |  Overdue: ${d.overdue}`, 14, yPos);
+        yPos += 6; 
+      });
+
+      yPos += 2;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(14, yPos, 196, yPos);
+      yPos += 4;
+
       doc.autoTable({
-        html: '#tasksTable',
-        startY: 20,
+        html: '#pdfTasksTable',
+        startY: yPos,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [44, 62, 80] }
       });
+
       doc.save(empName.replace(/[^a-zA-Z0-9]/g, "_") + "_Tasks.pdf");
     }
 
@@ -601,25 +816,75 @@
           let isOd = checkIsOverdue(t.targetDate) && t.status === 'Pending';
           let statusClass = t.status === 'Completed' ? 'status-Completed' : (isOd ? 'status-Overdue' : 'status-Pending');
           let statusText = isOd ? 'Pending (Overdue)' : t.status;
-          html += `<tr><td>${t.reportType}</td><td>${t.desc}</td><td style="${isOd?'color:#c0392b':''}">${t.targetDate}</td><td class="${statusClass}">${statusText}</td><td><button class="btn btn-primary" style="margin:0; padding:6px 12px; font-size:12px;" onclick="openModal('${t.txnId}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update</button></td></tr>`;
+          html += `<tr>
+            <td>${t.reportType}</td>
+            <td>${t.desc}</td>
+            <td style="${isOd?'color:#c0392b':''}">${t.targetDate}</td>
+            <td class="${statusClass}">${statusText}</td>
+            <td>
+              <button class="btn btn-primary" style="margin:0; padding:6px 12px; font-size:12px;" onclick="openModal('${t.txnId}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update</button>
+              ${t.attachmentUrl ? `<br><a href="${t.attachmentUrl}" target="_blank" style="font-size:11px; color:#0056b3; font-weight:500; text-decoration:none; display:inline-block; margin-top:5px;">📎 View File</a>` : ''}
+            </td>
+          </tr>`;
         }
       });
       tbody.innerHTML = html === "" ? '<tr><td colspan="5" style="text-align:center;">No tasks match this filter.</td></tr>' : html;
     }
 
-    function openModal(txnId, currentStatus, currentRemarks) { document.getElementById("modalTxnId").value = txnId; document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; document.getElementById("modalRemarks").value = currentRemarks || ""; document.getElementById("taskModal").style.display = "flex"; }
+    function openModal(txnId, currentStatus, currentRemarks) { 
+      document.getElementById("modalTxnId").value = txnId; 
+      document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; 
+      document.getElementById("modalRemarks").value = currentRemarks || ""; 
+      document.getElementById("modalAttachment").value = ""; 
+      document.getElementById("taskModal").style.display = "flex"; 
+    }
+    
     function closeModal() { document.getElementById("taskModal").style.display = "none"; }
 
+    const getBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
+    });
+
     async function saveTaskUpdate(e) {
-      e.preventDefault(); const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Updating..."; btn.disabled = true;
-      const updateData = { txnId: document.getElementById("modalTxnId").value, status: document.getElementById("modalStatus").value, remarks: document.getElementById("modalRemarks").value, userName: userName };
-      try { const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) }); const result = await res.json();
-        if(result.success) { closeModal(); await loadMyDepartmentTasks(); if(currentViewEmp) openEmployeeTasks(currentViewEmp); } else { alert("Update Failed: " + result.message); }
+      e.preventDefault(); 
+      const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Uploading & Saving..."; btn.disabled = true;
+
+      const fileInput = document.getElementById("modalAttachment");
+      let fileData = null;
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        try {
+          const base64String = await getBase64(file);
+          fileData = { base64: base64String, mimeType: file.type, filename: file.name };
+        } catch (err) {
+          alert("Error reading file.");
+          btn.innerText = "Save Changes"; btn.disabled = false;
+          return;
+        }
+      }
+
+      const updateData = { 
+        txnId: document.getElementById("modalTxnId").value, 
+        status: document.getElementById("modalStatus").value, 
+        remarks: document.getElementById("modalRemarks").value, 
+        userName: userName,
+        fileData: fileData 
+      };
+      
+      try { 
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) }); 
+        const result = await res.json();
+        if(result.success) { 
+          closeModal(); await loadMyDepartmentTasks(); 
+          if(currentViewEmp) openEmployeeTasks(currentViewEmp); 
+        } else { alert("Update Failed: " + result.message); }
       } catch (error) { alert("System Error."); } finally { btn.innerText = "Save Changes"; btn.disabled = false; }
     }
 
-    // --- NAYA JS: SYSTEM USERS MANAGEMENT ---
-    
     function toggleSystemUserView(view) {
       document.getElementById('btn-userFormToggle').classList.remove('active'); 
       document.getElementById('btn-userListToggle').classList.remove('active');
@@ -702,7 +967,6 @@
       } catch (e) { alert("System Error."); } 
     }
     
-    // Page load
     window.onload = function() { 
       loadHodList(); 
       loadDashboardData(); 
