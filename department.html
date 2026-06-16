@@ -42,7 +42,7 @@
 
     .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
     .form-group label { font-size: 14px; color: #555; margin-bottom: 5px; font-weight: 500; }
-    .form-group textarea, .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; width: 100%; box-sizing: border-box; }
+    .form-group textarea, .form-group select, .form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; width: 100%; box-sizing: border-box; }
     
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 25px; border-radius: 8px; width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -110,6 +110,11 @@
         <input type="hidden" id="modalTxnId">
         <div class="form-group"><label>Update Status to *</label><select id="modalStatus" required><option value="Completed">Mark as Completed</option><option value="Pending">Keep as Pending</option></select></div>
         <div class="form-group"><label>Official Remarks / Notes</label><textarea id="modalRemarks" rows="3" placeholder="Enter completion notes, asset IDs, or reference numbers here..."></textarea></div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Upload Attachment (Optional)</label>
+          <input type="file" id="modalAttachment" style="padding: 8px; border: 1px dashed #ccc; background: #fafafa;">
+          <small style="color: #888; font-size: 11px;">Max size ~5MB recommended.</small>
+        </div>
         <button type="submit" class="submit-btn" id="modalSaveBtn">Confirm & Save Update</button>
       </form>
     </div>
@@ -124,7 +129,6 @@
     else { document.getElementById("displayUser").innerText = "Welcome, " + userName; document.getElementById("sidebarTitle").innerText = userDept + " Portal"; }
     function logout() { sessionStorage.clear(); window.location.href = "index.html"; }
 
-    // 👇 YAHAN APNA SAME GAS URL DAALO 👇
     const API_URL = "https://script.google.com/macros/s/AKfycbzCApKOAs8_24Ymwvz9qyVJkE00Wmc35szpe2_vHoAj3xt11WXAAY4QEWnzz22KxU3a-w/exec";
     
     let globalDeptTasks = []; 
@@ -132,7 +136,6 @@
 
     async function fetchDepartmentData() {
       try {
-        // NAYA: userName bhi pass ho raha hai filtering ke liye
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getDepartmentTasks", department: userDept, userName: userName }) });
         const result = await res.json();
         if (result.success) {
@@ -181,8 +184,17 @@
         if(filterStatus === "All" || t.status === filterStatus) {
           let actionHtml = t.status === 'Pending' 
             ? `<button class="action-btn" onclick="openModal('${t.txnId}', '${t.empName.replace(/'/g, "\\'")}', '${t.desc.replace(/'/g, "\\'")}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update Progress</button>`
-            : `<div><span style="color:#888;">Done ✓</span><br><span style="font-size:12px; color:#666;">Note: ${t.remarks || '-'}</span></div>`;
-          html += `<tr><td><span style="background:#e9ecef; padding:3px 8px; border-radius:12px; font-size:12px;">${t.reportType}</span></td><td>${t.desc}</td><td>${t.targetDate}</td><td class="${t.status==='Completed'?'status-Completed':'status-Pending'}">${t.status}</td><td>${actionHtml}</td></tr>`;
+            : `<div><span style="color:#888;">Done ✓</span></div>`;
+            
+          let attachmentHtml = t.attachmentUrl ? `<br><a href="${t.attachmentUrl}" target="_blank" style="font-size:12px; color:#0056b3; font-weight:500; text-decoration:none; display:inline-block; margin-top:4px;">📎 View File</a>` : '';
+
+          html += `<tr>
+            <td><span style="background:#e9ecef; padding:3px 8px; border-radius:12px; font-size:12px;">${t.reportType}</span></td>
+            <td>${t.desc}</td>
+            <td>${t.targetDate}</td>
+            <td class="${t.status==='Completed'?'status-Completed':'status-Pending'}">${t.status}</td>
+            <td>${actionHtml} <div style="font-size:12px; color:#666; margin-top:5px;">${t.remarks || ''}</div> ${attachmentHtml}</td>
+          </tr>`;
         }
       });
       tbody.innerHTML = html === "" ? `<tr><td colspan="5" style="text-align:center;">No ${filterStatus.toLowerCase()} tasks match this filter.</td></tr>` : html;
@@ -191,15 +203,46 @@
     function openModal(txnId, empName, taskDesc, currentStatus, currentRemarks) {
       document.getElementById("modalTxnId").value = txnId; document.getElementById("modalEmpName").innerText = empName; document.getElementById("modalTaskDesc").innerText = taskDesc;
       document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; document.getElementById("modalRemarks").value = currentRemarks || "";
+      document.getElementById("modalAttachment").value = ""; 
       document.getElementById("taskModal").style.display = "flex";
     }
 
     function closeModal() { document.getElementById("taskModal").style.display = "none"; }
 
+    const getBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
+    });
+
     async function saveTaskUpdate(e) {
       e.preventDefault();
-      const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Processing Update..."; btn.disabled = true;
-      const updateData = { txnId: document.getElementById("modalTxnId").value, status: document.getElementById("modalStatus").value, remarks: document.getElementById("modalRemarks").value };
+      const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Uploading & Saving..."; btn.disabled = true;
+
+      const fileInput = document.getElementById("modalAttachment");
+      let fileData = null;
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        try {
+          const base64String = await getBase64(file);
+          fileData = { base64: base64String, mimeType: file.type, filename: file.name };
+        } catch (err) {
+          alert("Error reading file.");
+          btn.innerText = "Confirm & Save Update"; btn.disabled = false;
+          return;
+        }
+      }
+
+      const updateData = { 
+        txnId: document.getElementById("modalTxnId").value, 
+        status: document.getElementById("modalStatus").value, 
+        remarks: document.getElementById("modalRemarks").value,
+        userName: userName,
+        fileData: fileData 
+      };
+
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) });
         const result = await res.json();
