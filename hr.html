@@ -231,29 +231,38 @@
           <button class="toggle-btn" id="btn-empListToggle" onclick="toggleEmpView('list')">View Existing</button>
         </div>
       </div>
+      
       <div class="card" id="empFormContainer" style="background: #fdfdfd; border: 1px solid #e0e0e0;">
         <h3 id="empFormTitle" style="margin-top: 0;">Create Employee Record</h3>
         <form id="addEmpForm" onsubmit="submitEmployee(event)">
           <input type="hidden" id="editEmpId" value="">
           <div class="form-grid">
+            <div class="form-group">
+              <label>Employee ID (Base) *</label>
+              <input type="text" id="empBaseId" required placeholder="Example: 1002 or EMP-1002">
+            </div>
+            
             <div class="form-group"><label>Employee Name *</label><input type="text" id="empName" required></div>
             <div class="form-group"><label>Company *</label><select id="empCompany" required><option value="GCSL">GCSL</option><option value="Gretex">Gretex Other</option></select></div>
             <div class="form-group"><label>Department *</label><select id="empDept" required><option value="IT">IT</option><option value="Accounts">Accounts</option><option value="Admin">Admin</option><option value="Compliance">Compliance</option><option value="HOD">HOD</option><option value="HR">HR</option></select></div>
             <div class="form-group"><label>Designation *</label><input type="text" id="empDesig" required></div>
             <div class="form-group"><label>Location</label><input type="text" id="empLoc"></div>
             <div class="form-group"><label>HOD Name</label><select id="empHod"><option value="">Loading HODs...</option></select></div>
+            
             <div class="form-group full-width" style="margin-top: 15px;"><strong>Base Reference Dates</strong></div>
             <div class="form-group"><label>Offer Date</label><input type="date" id="baseA"></div>
             <div class="form-group"><label>Date of Joining</label><input type="date" id="baseB"></div>
             <div class="form-group"><label>Resignation Date</label><input type="date" id="baseC"></div>
             <div class="form-group"><label>Date of Exit</label><input type="date" id="baseD"></div>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button type="submit" class="btn btn-primary" id="submitEmpBtn">Save Employee Record</button>
-            <button type="button" class="btn btn-cancel" id="cancelEmpEditBtn" onclick="resetEmpForm()">Cancel Edit</button>
+          
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button type="submit" class="btn btn-primary" id="submitEmpBtn" style="margin-top:0;">Save Employee Record</button>
+            <button type="button" class="btn btn-cancel" id="cancelEmpEditBtn" onclick="resetEmpForm()" style="margin-top:0;">Cancel Edit</button>
           </div>
         </form>
       </div>
+      
       <div class="card" id="empListContainer" style="display:none;">
         <h3 style="margin-top: 0;">Registered Employees</h3>
         <div style="overflow-x: auto;">
@@ -511,15 +520,11 @@
     // Global Chart Instances
     let statusChart = null;
     let bottleneckChart = null;
-
-    // Global Dashboard Chart Variables
     let pendingMainChart = null;
     let overdueChart = null;
     let completedChart = null;
     let upcomingChart = null;
     let globalPendingTasksList = [];
-
-    
 
     async function loadDashboardData() {
       try {
@@ -529,7 +534,6 @@
         if (result.success) {
           const data = result.data;
           
-          // Basic Stats Update
           document.getElementById("dash-tot-emp").innerText = data.employeeStats.total;
           document.getElementById("dash-act-emp").innerText = data.employeeStats.active;
           document.getElementById("dash-tot-task").innerText = data.taskStats.total;
@@ -538,14 +542,12 @@
           document.getElementById("dash-up-task").innerText = data.taskStats.upcoming;
           document.getElementById("dash-com-task").innerText = data.taskStats.completed;
 
-          // Department Employee List
           let empHtml = "";
           for(const [dept, count] of Object.entries(data.employeeStats.byDepartment)) {
              empHtml += `<tr><td style="padding: 5px 12px; font-size:13px;"><strong>${dept}</strong></td><td style="padding: 5px 12px; font-size:13px;">${count}</td></tr>`;
           }
           document.getElementById("dash-dept-emp").innerHTML = empHtml || '<tr><td colspan="2" style="text-align:center;">No data</td></tr>';
 
-          // --- 1. RESTORED: Old Doughnut Chart (Task Status) ---
           if(statusChart) statusChart.destroy();
           const ctxStatus = document.getElementById('taskStatusChart').getContext('2d');
           statusChart = new Chart(ctxStatus, {
@@ -555,7 +557,7 @@
               datasets: [{
                 data: [
                   data.taskStats.completed, 
-                  data.taskStats.pending - data.taskStats.overdueBreakdown.pending, // Pending that are NOT overdue
+                  data.taskStats.pending - data.taskStats.overdueBreakdown.pending,
                   data.taskStats.overdueBreakdown.pending
                 ],
                 backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c'],
@@ -565,7 +567,6 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
           });
 
-          // --- 2. RESTORED: Old Bar Chart (Department Bottlenecks) ---
           if(bottleneckChart) bottleneckChart.destroy();
           const departments = Object.keys(data.taskStats.pendingByDepartment);
           const pendingData = [];
@@ -589,23 +590,18 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
           });
 
-          // --- Assign Global Pending List & Populate Dropdown for NEW Charts ---
           globalPendingTasksList = data.taskStats.pendingTasksList;
           let empSet = new Set(globalPendingTasksList.map(t => t.empName));
           let empOpts = '<option value="All">All Employees</option>';
           empSet.forEach(emp => { empOpts += `<option value="${emp}">${emp}</option>`; });
           document.getElementById("dashPendEmp").innerHTML = empOpts;
 
-          // Render Main Pending Control Room
           renderPendingControl();
-
-          // Render Sub-Charts
           renderSubCharts(data.taskStats);
         }
       } catch (e) { console.error("Dashboard Load Error:", e); }
     }
 
-    // Toggle Pending Area View
     function togglePendingView(view) {
       document.getElementById('btn-pendChart').classList.remove('active');
       document.getElementById('btn-pendTable').classList.remove('active');
@@ -620,7 +616,6 @@
       }
     }
 
-    // Main Filter & Render Engine for Pending Tasks
     function renderPendingControl() {
       const filterEmp = document.getElementById("dashPendEmp").value;
       const filterDept = document.getElementById("dashPendDept").value;
@@ -632,21 +627,17 @@
                (filterType === "All" || t.reportType === filterType);
       });
 
-      // Populate Table
       let tableHtml = "";
       let chartDataMap = {};
 
       filtered.forEach(t => {
         let statusHtml = t.isOverdue ? '<span style="color:#c0392b; font-weight:bold;">Overdue</span>' : '<span style="color:#f39c12; font-weight:bold;">On Track</span>';
         tableHtml += `<tr><td><strong>${t.empName}</strong></td><td>${t.dept}</td><td>${t.reportType}</td><td>${t.targetDate}</td><td>${statusHtml}</td></tr>`;
-        
-        // Group by Dept for Chart
         chartDataMap[t.dept] = (chartDataMap[t.dept] || 0) + 1;
       });
 
       document.getElementById("dashPendTableBody").innerHTML = tableHtml || '<tr><td colspan="5" style="text-align:center;">No pending tasks match criteria</td></tr>';
 
-      // Draw Main Pending Chart
       if(pendingMainChart) pendingMainChart.destroy();
       const ctxMain = document.getElementById('pendingMainChart').getContext('2d');
       pendingMainChart = new Chart(ctxMain, {
@@ -659,13 +650,11 @@
       });
     }
 
-    // Render Sub-Charts (Overdue, Completed, Upcoming)
     function renderSubCharts(stats) {
       if(overdueChart) overdueChart.destroy();
       if(completedChart) completedChart.destroy();
       if(upcomingChart) upcomingChart.destroy();
 
-      // 1. Overdue Breakdown (Doughnut)
       const ctxOD = document.getElementById('overdueChart').getContext('2d');
       overdueChart = new Chart(ctxOD, {
         type: 'doughnut',
@@ -676,7 +665,6 @@
         options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
       });
 
-      // 2. Completed TAT Breakdown (Doughnut)
       const ctxComp = document.getElementById('completedChart').getContext('2d');
       completedChart = new Chart(ctxComp, {
         type: 'doughnut',
@@ -687,7 +675,6 @@
         options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
       });
 
-      // 3. Upcoming Timeline (Bar Chart)
       const upKeys = Object.keys(stats.upcomingBreakdown);
       const upValues = Object.values(stats.upcomingBreakdown);
       const ctxUp = document.getElementById('upcomingChart').getContext('2d');
@@ -700,8 +687,6 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
       });
     }
-
-
 
     async function loadHodList() {
       const hodSelect = document.getElementById("empHod");
@@ -725,10 +710,70 @@
         }
       } catch (e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error fetching data.</td></tr>'; }
     }
-    function editEmployee(emp) { toggleEmpView('form'); document.getElementById("empFormTitle").innerText = "Edit Employee Record"; document.getElementById("editEmpId").value = emp.empId; document.getElementById("empName").value = emp.name; document.getElementById("empCompany").value = emp.company; document.getElementById("empDept").value = emp.department; document.getElementById("empDesig").value = emp.designation; document.getElementById("empLoc").value = emp.location; document.getElementById("empHod").value = emp.hod; document.getElementById("baseA").value = emp.baseA; document.getElementById("baseB").value = emp.baseB; document.getElementById("baseC").value = emp.baseC; document.getElementById("baseD").value = emp.baseD; document.getElementById("submitEmpBtn").innerText = "Update Record"; document.getElementById("cancelEmpEditBtn").style.display = "block"; }
-    function resetEmpForm() { document.getElementById("addEmpForm").reset(); document.getElementById("empFormTitle").innerText = "Create Employee Record"; document.getElementById("editEmpId").value = ""; document.getElementById("submitEmpBtn").innerText = "Save Employee Record"; document.getElementById("cancelEmpEditBtn").style.display = "none"; }
-    async function submitEmployee(e) { e.preventDefault(); const btn = document.getElementById("submitEmpBtn"); btn.innerText = "Processing..."; btn.disabled = true; const empId = document.getElementById("editEmpId").value; const empData = { empId: empId, name: document.getElementById("empName").value, company: document.getElementById("empCompany").value, department: document.getElementById("empDept").value, designation: document.getElementById("empDesig").value, location: document.getElementById("empLoc").value, hod: document.getElementById("empHod").value, baseA: document.getElementById("baseA").value, baseB: document.getElementById("baseB").value, baseC: document.getElementById("baseC").value, baseD: document.getElementById("baseD").value, };
-      try { const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: empId ? "updateEmployee" : "addEmployee", empData: empData }) }); const result = await res.json(); if (result.success) { alert(result.message); resetEmpForm(); } else { alert(result.message); } } catch (error) { alert("System Error."); } finally { btn.innerText = empId ? "Update Record" : "Save Employee Record"; btn.disabled = false; }
+
+    function editEmployee(emp) { 
+      toggleEmpView('form'); 
+      document.getElementById("empFormTitle").innerText = "Edit Employee Record"; 
+      document.getElementById("editEmpId").value = emp.empId; 
+      
+      document.getElementById("empBaseId").value = emp.empId; 
+      document.getElementById("empBaseId").readOnly = true; 
+      document.getElementById("empBaseId").style.backgroundColor = "#e9ecef"; 
+      
+      document.getElementById("empName").value = emp.name; 
+      document.getElementById("empCompany").value = emp.company; 
+      document.getElementById("empDept").value = emp.department; 
+      document.getElementById("empDesig").value = emp.designation; 
+      document.getElementById("empLoc").value = emp.location; 
+      document.getElementById("empHod").value = emp.hod; 
+      document.getElementById("baseA").value = emp.baseA; 
+      document.getElementById("baseB").value = emp.baseB; 
+      document.getElementById("baseC").value = emp.baseC; 
+      document.getElementById("baseD").value = emp.baseD; 
+      document.getElementById("submitEmpBtn").innerText = "Update Record"; 
+      document.getElementById("cancelEmpEditBtn").style.display = "block"; 
+    }
+
+    function resetEmpForm() { 
+      document.getElementById("addEmpForm").reset(); 
+      document.getElementById("empFormTitle").innerText = "Create Employee Record"; 
+      document.getElementById("editEmpId").value = ""; 
+      
+      document.getElementById("empBaseId").readOnly = false;
+      document.getElementById("empBaseId").style.backgroundColor = "white";
+      
+      document.getElementById("submitEmpBtn").innerText = "Save Employee Record"; 
+      document.getElementById("cancelEmpEditBtn").style.display = "none"; 
+    }
+
+    async function submitEmployee(e) { 
+      e.preventDefault(); 
+      const btn = document.getElementById("submitEmpBtn"); 
+      btn.innerText = "Processing..."; 
+      btn.disabled = true; 
+      const empId = document.getElementById("editEmpId").value; 
+      
+      const empData = { 
+        empId: empId, 
+        baseEmpId: document.getElementById("empBaseId").value.trim(), 
+        name: document.getElementById("empName").value, 
+        company: document.getElementById("empCompany").value, 
+        department: document.getElementById("empDept").value, 
+        designation: document.getElementById("empDesig").value, 
+        location: document.getElementById("empLoc").value, 
+        hod: document.getElementById("empHod").value, 
+        baseA: document.getElementById("baseA").value, 
+        baseB: document.getElementById("baseB").value, 
+        baseC: document.getElementById("baseC").value, 
+        baseD: document.getElementById("baseD").value 
+      };
+      
+      try { 
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: empId ? "updateEmployee" : "addEmployee", empData: empData }) }); 
+        const result = await res.json(); 
+        if (result.success) { alert(result.message); resetEmpForm(); } else { alert(result.message); } 
+      } catch (error) { alert("System Error."); } 
+      finally { btn.innerText = empId ? "Update Record" : "Save Employee Record"; btn.disabled = false; }
     }
     async function deleteEmployee(empId) { if(!confirm("Are you sure you want to delete this employee?")) return; try { const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "deleteEmployee", empId: empId }) }); const result = await res.json(); alert(result.message); loadEmployees(); } catch (e) { alert("System Error."); } }
     
@@ -821,7 +866,6 @@
       filtered.forEach(t => {
         let isOd = checkIsOverdue(t.targetDate); 
 
-        // Update Overall Stats & Lists
         overall.total++;
         overall.taskLists.all.push(`[${t.dept}] ` + t.desc);
 
@@ -841,7 +885,6 @@
           }
         }
 
-        // Initialize Department Data if not exists
         if (!deptData[t.dept]) {
           deptData[t.dept] = { 
             tasks: [], 
@@ -850,7 +893,6 @@
           };
         }
         
-        // Update Department Stats & Lists
         deptData[t.dept].tasks.push(t);
         deptData[t.dept].stats.total++;
         deptData[t.dept].taskLists.all.push(t.desc);
@@ -873,11 +915,8 @@
       });
 
       const sortedDepts = Object.keys(deptData).sort();
-
-      // Tooltip Generator Helper
       const makeTooltip = (arr) => arr.length > 0 ? arr.map((item, idx) => `${idx + 1}. ${item.replace(/"/g, '&quot;')}`).join('&#10;') : 'No tasks';
 
-      // --- Department-wise Summary Table with HOVER ---
       let deptSummaryTable = `
         <div class="card" style="box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 25px; padding: 20px; border: 1px solid #eef2f5;">
           <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #2c3e50;">Department-wise Task Summary <span style="font-size:11px; color:#888; font-weight:normal;">(Hover over numbers to see task list)</span></h3>
@@ -911,7 +950,6 @@
         `;
       });
 
-      // GRAND TOTAL Row with HOVER
       deptSummaryTable += `
           <tr style="background-color: #f0f4f8; border-top: 2px solid #bdc3c7;">
             <td style="font-size: 14px;"><strong>GRAND TOTAL</strong></td>
@@ -930,12 +968,9 @@
 
       sortedDepts.forEach(dName => {
         const dInfo = deptData[dName];
-
         tasksHtml += `
           <div class="dept-group">
-            <div class="dept-header">
-              <h4>${dName} Department (Detailed Tasks)</h4>
-            </div>
+            <div class="dept-header"><h4>${dName} Department (Detailed Tasks)</h4></div>
             <div style="overflow-x: auto;">
               <table style="margin-top:0; border-top:none;">
                 <thead><tr><th style="width:45%">Task Description</th><th style="width:15%">Target Date</th><th style="width:15%">Status</th><th style="width:25%">Updated By & At</th></tr></thead>
@@ -946,8 +981,8 @@
           let isOd = checkIsOverdue(t.targetDate) && t.status === 'Pending';
           let statusClass = t.status === 'Completed' ? 'status-Completed' : (isOd ? 'status-Overdue' : 'status-Pending');
           let statusText = isOd ? 'Pending (Overdue)' : t.status;
-          
           let statusTextPdf = (isOd && t.status === 'Pending') ? 'Pending (Overdue)' : t.status;
+          
           pdfRows += `<tr><td>${t.dept}</td><td>${t.desc}</td><td>${t.targetDate}</td><td>${statusTextPdf}</td><td>${t.updatedBy || '-'}</td><td>${t.actualDate || '-'}</td></tr>`;
           
           tasksHtml += `<tr>
@@ -962,7 +997,6 @@
             </td>
           </tr>`;
         });
-
         tasksHtml += `</tbody></table></div></div>`;
       });
 
@@ -1015,8 +1049,6 @@
       if(filtered.length === 0) { alert("No data match the current filters!"); return; }
 
       let processTypes = [...new Set(filtered.map(t => t.reportType))].join(' & ');
-      
-      // Update stats to include Overdue details precisely
       let overall = { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 };
       let deptData = {};
       
@@ -1068,30 +1100,13 @@
       const sortedDepts = Object.keys(deptData).sort();
       let summaryBody = [];
       
-      // Populate Summary Body array
       sortedDepts.forEach(deptName => {
         const d = deptData[deptName];
-        summaryBody.push([
-          deptName, 
-          d.total.toString(), 
-          d.pending.toString(), 
-          d.completed.toString(), 
-          d.overduePending.toString(), 
-          d.overdueCompleted.toString()
-        ]);
+        summaryBody.push([deptName, d.total.toString(), d.pending.toString(), d.completed.toString(), d.overduePending.toString(), d.overdueCompleted.toString()]);
       });
 
-      // Add Grand Total Row
-      summaryBody.push([
-        "GRAND TOTAL",
-        overall.total.toString(),
-        overall.pending.toString(),
-        overall.completed.toString(),
-        overall.overduePending.toString(),
-        overall.overdueCompleted.toString()
-      ]);
+      summaryBody.push(["GRAND TOTAL", overall.total.toString(), overall.pending.toString(), overall.completed.toString(), overall.overduePending.toString(), overall.overdueCompleted.toString()]);
 
-      // Render Summary Table in PDF
       doc.autoTable({
         startY: yPos,
         head: [['Department', 'Total Tasks', 'Pending', 'Completed', 'Overdue (Pending)', 'Overdue (Completed)']],
@@ -1100,30 +1115,22 @@
         headStyles: { fillColor: [44, 62, 80] },
         styles: { fontSize: 9 },
         willDrawCell: function(data) {
-          // Make Grand Total row bold and grey background
           if (data.row.index === summaryBody.length - 1) {
             doc.setFont("helvetica", "bold");
             if(data.section === 'body') data.cell.styles.fillColor = [240, 244, 248];
-          } else {
-            doc.setFont("helvetica", "normal");
-          }
+          } else { doc.setFont("helvetica", "normal"); }
           
-          // Apply Colors for Pending, Completed, Overdue numbers
           if(data.section === 'body') {
-             if (data.column.index === 2) data.cell.styles.textColor = [211, 84, 0]; // Pending Orange
-             if (data.column.index === 3) data.cell.styles.textColor = [39, 174, 96]; // Completed Green
-             if (data.column.index === 4 || data.column.index === 5) data.cell.styles.textColor = [192, 57, 43]; // Overdue Red
+             if (data.column.index === 2) data.cell.styles.textColor = [211, 84, 0];
+             if (data.column.index === 3) data.cell.styles.textColor = [39, 174, 96];
+             if (data.column.index === 4 || data.column.index === 5) data.cell.styles.textColor = [192, 57, 43];
           }
         }
       });
 
       yPos = doc.lastAutoTable.finalY + 10;
+      doc.setFont("helvetica", "bold"); doc.text("Detailed Task Breakdown:", 14, yPos); yPos += 5;
 
-      doc.setFont("helvetica", "bold");
-      doc.text("Detailed Task Breakdown:", 14, yPos);
-      yPos += 5;
-
-      // Render Detailed Tasks Table in PDF
       doc.autoTable({
         html: '#pdfTasksTable',
         startY: yPos,
@@ -1131,7 +1138,6 @@
         styles: { fontSize: 8 },
         headStyles: { fillColor: [44, 62, 80] },
         didParseCell: function(data) {
-           // Colorize the Status column in detailed view
            if(data.section === 'body' && data.column.index === 3) {
               let txt = data.cell.text[0] || "";
               if(txt === 'Completed') data.cell.styles.textColor = [39, 174, 96];
@@ -1181,15 +1187,33 @@
     }
 
     let currentViewEmp = ""; 
+    
     function openEmployeeTasks(empName) {
-      currentViewEmp = empName; document.getElementById("myTasks-empList").style.display = "none"; document.getElementById("myTasks-taskList").style.display = "block"; document.getElementById("taskViewEmpName").innerText = "Tasks for: " + empName; document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active')); document.querySelector('#myTasks-taskList .toggle-btn').classList.add('active'); renderTaskList("All");
+      currentViewEmp = empName; 
+      document.getElementById("myTasks-empList").style.display = "none"; 
+      document.getElementById("myTasks-taskList").style.display = "block"; 
+      document.getElementById("taskViewEmpName").innerText = "Tasks for: " + empName; 
+      document.querySelectorAll('#myTasks-taskList .toggle-btn').forEach(b => b.classList.remove('active')); 
+      document.querySelector('#myTasks-taskList .toggle-btn').classList.add('active'); 
+      renderTaskList("All");
     }
 
-    function backToEmpList() { document.getElementById("myTasks-empList").style.display = "block"; document.getElementById("myTasks-taskList").style.display = "none"; currentViewEmp = ""; }
-    function filterTasks(status, btnElement) { document.querySelectorAll('#myTasks-taskList .toggle-btn').forEach(b => b.classList.remove('active')); btnElement.classList.add('active'); renderTaskList(status); }
+    function backToEmpList() { 
+      document.getElementById("myTasks-empList").style.display = "block"; 
+      document.getElementById("myTasks-taskList").style.display = "none"; 
+      currentViewEmp = ""; 
+    }
+
+    function filterTasks(status, btnElement) { 
+      document.querySelectorAll('#myTasks-taskList .toggle-btn').forEach(b => b.classList.remove('active')); 
+      btnElement.classList.add('active'); 
+      renderTaskList(status); 
+    }
 
     function renderTaskList(filterStatus) {
-      const tbody = document.getElementById("myTasksTableBody"); const empTasks = globalDepartmentTasks.filter(t => t.empName === currentViewEmp); let html = "";
+      const tbody = document.getElementById("myTasksTableBody"); 
+      const empTasks = globalDepartmentTasks.filter(t => t.empName === currentViewEmp); 
+      let html = "";
       empTasks.forEach(t => {
         if(filterStatus === "All" || t.status === filterStatus) {
           let isOd = checkIsOverdue(t.targetDate) && t.status === 'Pending';
@@ -1230,61 +1254,33 @@
     async function saveTaskUpdate(e) {
       e.preventDefault(); 
       const btn = document.getElementById("modalSaveBtn"); btn.innerText = "Uploading & Saving..."; btn.disabled = true;
-
       const fileInput = document.getElementById("modalAttachment");
       let fileData = null;
-
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
         try {
           const base64String = await getBase64(file);
           fileData = { base64: base64String, mimeType: file.type, filename: file.name };
-        } catch (err) {
-          alert("Error reading file.");
-          btn.innerText = "Save Changes"; btn.disabled = false;
-          return;
-        }
+        } catch (err) { alert("Error reading file."); btn.innerText = "Save Changes"; btn.disabled = false; return; }
       }
-
-      const updateData = { 
-        txnId: document.getElementById("modalTxnId").value, 
-        status: document.getElementById("modalStatus").value, 
-        remarks: document.getElementById("modalRemarks").value, 
-        userName: userName,
-        fileData: fileData 
-      };
-      
+      const updateData = { txnId: document.getElementById("modalTxnId").value, status: document.getElementById("modalStatus").value, remarks: document.getElementById("modalRemarks").value, userName: userName, fileData: fileData };
       try { 
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) }); 
         const result = await res.json();
-        if(result.success) { 
-          closeModal(); await loadMyDepartmentTasks(); 
-          if(currentViewEmp) openEmployeeTasks(currentViewEmp); 
-        } else { alert("Update Failed: " + result.message); }
+        if(result.success) { closeModal(); await loadMyDepartmentTasks(); if(currentViewEmp) openEmployeeTasks(currentViewEmp); } else { alert("Update Failed: " + result.message); }
       } catch (error) { alert("System Error."); } finally { btn.innerText = "Save Changes"; btn.disabled = false; }
     }
 
     function toggleSystemUserView(view) {
-      document.getElementById('btn-userFormToggle').classList.remove('active'); 
-      document.getElementById('btn-userListToggle').classList.remove('active');
-      if(view === 'form') { 
-        document.getElementById('userFormContainer').style.display = 'block'; 
-        document.getElementById('userListContainer').style.display = 'none'; 
-        document.getElementById('btn-userFormToggle').classList.add('active');
-      } else { 
-        document.getElementById('userFormContainer').style.display = 'none'; 
-        document.getElementById('userListContainer').style.display = 'block'; 
-        document.getElementById('btn-userListToggle').classList.add('active'); 
-        loadSystemUsers(); 
-      }
+      document.getElementById('btn-userFormToggle').classList.remove('active'); document.getElementById('btn-userListToggle').classList.remove('active');
+      if(view === 'form') { document.getElementById('userFormContainer').style.display = 'block'; document.getElementById('userListContainer').style.display = 'none'; document.getElementById('btn-userFormToggle').classList.add('active');
+      } else { document.getElementById('userFormContainer').style.display = 'none'; document.getElementById('userListContainer').style.display = 'block'; document.getElementById('btn-userListToggle').classList.add('active'); loadSystemUsers(); }
     }
 
     async function loadSystemUsers() {
-      const tbody = document.getElementById("sysUsersTableBody"); 
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Fetching data...</td></tr>';
+      const tbody = document.getElementById("sysUsersTableBody"); tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Fetching data...</td></tr>';
       try { 
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getSystemUsers" }) }); 
-        const result = await res.json();
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getSystemUsers" }) }); const result = await res.json();
         if (result.success) { 
           tbody.innerHTML = result.data.map(u => `<tr><td><strong>${u.userName}</strong></td><td>${u.email}</td><td>${u.department}</td><td>${u.role}</td><td style="-webkit-text-security: disc;">${u.password}</td><td><button class="btn btn-edit" onclick='editSystemUser(${JSON.stringify(u).replace(/'/g, "&#39;")})'>Edit</button> <button class="btn btn-danger" onclick="deleteSystemUser('${u.email}')">Delete</button></td></tr>`).join('');
           if(result.data.length === 0) tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No users found.</td></tr>';
@@ -1292,64 +1288,14 @@
       } catch (e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error fetching data.</td></tr>'; }
     }
 
-    function editSystemUser(user) { 
-      toggleSystemUserView('form'); 
-      document.getElementById("userFormTitle").innerText = "Edit System User"; 
-      document.getElementById("editOriginalEmail").value = user.email; 
-      document.getElementById("sysUserName").value = user.userName; 
-      document.getElementById("sysUserEmail").value = user.email; 
-      document.getElementById("sysUserEmail").readOnly = true; 
-      document.getElementById("sysUserPass").value = user.password; 
-      document.getElementById("sysUserDept").value = user.department; 
-      document.getElementById("sysUserRole").value = user.role; 
-      document.getElementById("submitUserBtn").innerText = "Update User Account"; 
-      document.getElementById("cancelUserEditBtn").style.display = "block"; 
+    function editSystemUser(user) { toggleSystemUserView('form'); document.getElementById("userFormTitle").innerText = "Edit System User"; document.getElementById("editOriginalEmail").value = user.email; document.getElementById("sysUserName").value = user.userName; document.getElementById("sysUserEmail").value = user.email; document.getElementById("sysUserEmail").readOnly = true; document.getElementById("sysUserPass").value = user.password; document.getElementById("sysUserDept").value = user.department; document.getElementById("sysUserRole").value = user.role; document.getElementById("submitUserBtn").innerText = "Update User Account"; document.getElementById("cancelUserEditBtn").style.display = "block"; }
+    function resetSystemUserForm() { document.getElementById("addUserForm").reset(); document.getElementById("userFormTitle").innerText = "Create New App Login"; document.getElementById("editOriginalEmail").value = ""; document.getElementById("sysUserEmail").readOnly = false; document.getElementById("submitUserBtn").innerText = "Create User Account"; document.getElementById("cancelUserEditBtn").style.display = "none"; }
+    async function submitSystemUser(e) { e.preventDefault(); const btn = document.getElementById("submitUserBtn"); btn.innerText = "Processing..."; btn.disabled = true; const originalEmail = document.getElementById("editOriginalEmail").value; const userData = { originalEmail: originalEmail, userName: document.getElementById("sysUserName").value, email: document.getElementById("sysUserEmail").value, password: document.getElementById("sysUserPass").value, department: document.getElementById("sysUserDept").value, role: document.getElementById("sysUserRole").value };
+      try { const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: originalEmail ? "updateSystemUser" : "addSystemUser", userData: userData }) }); const result = await res.json(); if (result.success) { alert(result.message); resetSystemUserForm(); } else { alert(result.message); } } catch (error) { alert("System Error."); } finally { btn.innerText = originalEmail ? "Update User Account" : "Create User Account"; btn.disabled = false; }
     }
-
-    function resetSystemUserForm() { 
-      document.getElementById("addUserForm").reset(); 
-      document.getElementById("userFormTitle").innerText = "Create New App Login"; 
-      document.getElementById("editOriginalEmail").value = ""; 
-      document.getElementById("sysUserEmail").readOnly = false;
-      document.getElementById("submitUserBtn").innerText = "Create User Account"; 
-      document.getElementById("cancelUserEditBtn").style.display = "none"; 
-    }
-
-    async function submitSystemUser(e) { 
-      e.preventDefault(); 
-      const btn = document.getElementById("submitUserBtn"); 
-      btn.innerText = "Processing..."; btn.disabled = true; 
-      const originalEmail = document.getElementById("editOriginalEmail").value; 
-      const userData = { 
-        originalEmail: originalEmail,
-        userName: document.getElementById("sysUserName").value, 
-        email: document.getElementById("sysUserEmail").value, 
-        password: document.getElementById("sysUserPass").value, 
-        department: document.getElementById("sysUserDept").value, 
-        role: document.getElementById("sysUserRole").value
-      };
-      try { 
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: originalEmail ? "updateSystemUser" : "addSystemUser", userData: userData }) }); 
-        const result = await res.json(); 
-        if (result.success) { alert(result.message); resetSystemUserForm(); } else { alert(result.message); } 
-      } catch (error) { alert("System Error."); } 
-      finally { btn.innerText = originalEmail ? "Update User Account" : "Create User Account"; btn.disabled = false; }
-    }
-
-    async function deleteSystemUser(email) { 
-      if(!confirm("Are you sure you want to completely remove this user access?")) return; 
-      try { 
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "deleteSystemUser", email: email }) }); 
-        const result = await res.json(); 
-        alert(result.message); 
-        loadSystemUsers(); 
-      } catch (e) { alert("System Error."); } 
-    }
+    async function deleteSystemUser(email) { if(!confirm("Are you sure you want to completely remove this user access?")) return; try { const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "deleteSystemUser", email: email }) }); const result = await res.json(); alert(result.message); loadSystemUsers(); } catch (e) { alert("System Error."); } }
     
-    window.onload = function() { 
-      loadHodList(); 
-      loadDashboardData(); 
-    };
+    window.onload = function() { loadHodList(); loadDashboardData(); };
   </script>
 </body>
 </html>
