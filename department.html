@@ -55,7 +55,10 @@
   <div class="sidebar">
     <div class="sidebar-header" id="sidebarTitle">Department</div>
     <div class="nav-links">
-      <div id="nav-dashboard" class="active" onclick="backToEmpList()">Department Tasks</div>
+      <div id="nav-dashboard" class="active" onclick="switchSidebarFilter('Dashboard', this)">📋 Department Tasks</div>
+      <div id="nav-pending" onclick="switchSidebarFilter('Pending', this)">⏳ Pending Tasks</div>
+      <div id="nav-overdue" onclick="switchSidebarFilter('Overdue', this)">⚠️ Overdue Tasks</div>
+      <div id="nav-today" onclick="switchSidebarFilter('Today', this)">📅 Due Today</div>
     </div>
     <div class="user-info">
       <span id="displayUser">Loading...</span><br><br>
@@ -96,6 +99,18 @@
           </table>
         </div>
       </div>
+
+      <div id="dept-filteredList" style="display: none;">
+        <h3 id="filteredViewTitle" style="margin-top: 0; color: #333;">Filtered Tasks</h3>
+        <p style="font-size: 14px; color: #666; margin-top:-5px;">Consolidated list of tasks across all assigned employees.</p>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead><tr><th>Employee</th><th>Process Type</th><th>Task Description</th><th>Target Date</th><th>Status</th><th>Action / Remarks</th></tr></thead>
+            <tbody id="filteredTaskTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -134,15 +149,66 @@
     let globalDeptTasks = []; 
     let currentViewEmp = "";
 
+    // Helper function to check date category
+    function getDateCategory(dateStr) {
+      if(!dateStr || dateStr.includes("Missing") || dateStr.includes("Invalid")) return 'None';
+      const parts = dateStr.split('-');
+      if(parts.length !== 3) return 'None';
+      
+      const target = new Date(parts[2], parts[1] - 1, parts[0]);
+      target.setHours(0,0,0,0);
+      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      
+      if (target < today) return 'Overdue';
+      if (target.getTime() === today.getTime()) return 'Today';
+      return 'Upcoming';
+    }
+
     async function fetchDepartmentData() {
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getDepartmentTasks", department: userDept, userName: userName }) });
         const result = await res.json();
         if (result.success) {
-          globalDeptTasks = result.data; renderEmpList();
-          if(currentViewEmp) renderTaskList(document.querySelector('.filter-btn.active').innerText);
+          globalDeptTasks = result.data; 
+          
+          // Re-render based on active sidebar tab
+          let activeNav = document.querySelector('.nav-links div.active');
+          if (!activeNav || activeNav.id === 'nav-dashboard') {
+            renderEmpList();
+            if(currentViewEmp) renderTaskList(document.querySelector('.filter-btn.active').innerText);
+          } else if (activeNav.id === 'nav-pending') { renderFilteredTasks('Pending'); }
+            else if (activeNav.id === 'nav-overdue') { renderFilteredTasks('Overdue'); }
+            else if (activeNav.id === 'nav-today') { renderFilteredTasks('Today'); }
+
         } else { console.error("Failed to load tasks"); }
       } catch (error) { document.getElementById("empTableBody").innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">System Error communicating with server.</td></tr>'; }
+    }
+
+    // Sidebar navigation controller
+    function switchSidebarFilter(filterType, btnElement) {
+      document.querySelectorAll('.nav-links div').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      if (filterType === 'Dashboard') {
+        document.getElementById("dept-empList").style.display = "block";
+        document.getElementById("dept-taskList").style.display = "none";
+        document.getElementById("dept-filteredList").style.display = "none";
+        currentViewEmp = "";
+        renderEmpList();
+      } else {
+        document.getElementById("dept-empList").style.display = "none";
+        document.getElementById("dept-taskList").style.display = "none";
+        document.getElementById("dept-filteredList").style.display = "block";
+        
+        let title = filterType === 'Pending' ? "⏳ All Active Pending Tasks" :
+                    filterType === 'Overdue' ? "⚠️ Critical Overdue Tasks" :
+                    "📅 Tasks Due Today";
+        document.getElementById("filteredViewTitle").innerText = title;
+        
+        renderFilteredTasks(filterType);
+      }
     }
 
     function renderEmpList() {
@@ -167,14 +233,25 @@
       currentViewEmp = empName;
       document.getElementById("dept-empList").style.display = "none";
       document.getElementById("dept-taskList").style.display = "block";
+      document.getElementById("dept-filteredList").style.display = "none";
       document.getElementById("taskViewEmpName").innerText = "Tasks for: " + empName;
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.filter-btn').classList.add('active'); 
       renderTaskList("All");
     }
 
-    function backToEmpList() { document.getElementById("dept-empList").style.display = "block"; document.getElementById("dept-taskList").style.display = "none"; currentViewEmp = ""; }
-    function filterTasks(status, btnElement) { document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btnElement.classList.add('active'); renderTaskList(status); }
+    function backToEmpList() { 
+      document.getElementById("dept-empList").style.display = "block"; 
+      document.getElementById("dept-taskList").style.display = "none"; 
+      document.getElementById("dept-filteredList").style.display = "none";
+      currentViewEmp = ""; 
+    }
+    
+    function filterTasks(status, btnElement) { 
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); 
+      btnElement.classList.add('active'); 
+      renderTaskList(status); 
+    }
 
     function renderTaskList(filterStatus) {
       const tbody = document.getElementById("taskTableBody");
@@ -182,17 +259,20 @@
       let html = "";
       empTasks.forEach(t => {
         if(filterStatus === "All" || t.status === filterStatus) {
+          let isOd = getDateCategory(t.targetDate) === 'Overdue' && t.status === 'Pending';
           let actionHtml = t.status === 'Pending' 
             ? `<button class="action-btn" onclick="openModal('${t.txnId}', '${t.empName.replace(/'/g, "\\'")}', '${t.desc.replace(/'/g, "\\'")}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update Progress</button>`
             : `<div><span style="color:#888;">Done ✓</span></div>`;
             
           let attachmentHtml = t.attachmentUrl ? `<br><a href="${t.attachmentUrl}" target="_blank" style="font-size:12px; color:#0056b3; font-weight:500; text-decoration:none; display:inline-block; margin-top:4px;">📎 View File</a>` : '';
+          let statusText = isOd ? 'Pending (Overdue)' : t.status;
+          let statusClass = t.status === 'Completed' ? 'status-Completed' : (isOd ? 'status-Pending' : 'status-Pending');
 
           html += `<tr>
             <td><span style="background:#e9ecef; padding:3px 8px; border-radius:12px; font-size:12px;">${t.reportType}</span></td>
             <td>${t.desc}</td>
-            <td>${t.targetDate}</td>
-            <td class="${t.status==='Completed'?'status-Completed':'status-Pending'}">${t.status}</td>
+            <td style="${isOd ? 'color:#c0392b; font-weight:bold;' : ''}">${t.targetDate}</td>
+            <td class="${statusClass}" style="${isOd ? 'color:#c0392b;' : ''}">${statusText}</td>
             <td>${actionHtml} <div style="font-size:12px; color:#666; margin-top:5px;">${t.remarks || ''}</div> ${attachmentHtml}</td>
           </tr>`;
         }
@@ -200,9 +280,48 @@
       tbody.innerHTML = html === "" ? `<tr><td colspan="5" style="text-align:center;">No ${filterStatus.toLowerCase()} tasks match this filter.</td></tr>` : html;
     }
 
+    // Render global filtered table
+    function renderFilteredTasks(filterType) {
+      const tbody = document.getElementById("filteredTaskTableBody");
+      let html = "";
+      
+      // Filter tasks based on status and date category
+      let filteredTasks = globalDeptTasks.filter(t => {
+         if (t.status === 'Completed') return false; // Sirf pending tasks dikhayenge in filters mein
+         
+         let cat = getDateCategory(t.targetDate);
+         if (filterType === 'Pending') return true; 
+         if (filterType === 'Overdue') return cat === 'Overdue';
+         if (filterType === 'Today') return cat === 'Today';
+         return false;
+      });
+
+      filteredTasks.forEach(t => {
+          let isOd = getDateCategory(t.targetDate) === 'Overdue';
+          let statusText = isOd ? 'Pending (Overdue)' : t.status;
+          
+          let actionHtml = `<button class="action-btn" onclick="openModal('${t.txnId}', '${t.empName.replace(/'/g, "\\'")}', '${t.desc.replace(/'/g, "\\'")}', '${t.status}', '${(t.remarks || '').replace(/'/g, "\\'")}')">Update Progress</button>`;
+          let attachmentHtml = t.attachmentUrl ? `<br><a href="${t.attachmentUrl}" target="_blank" style="font-size:12px; color:#0056b3; font-weight:500; text-decoration:none; display:inline-block; margin-top:4px;">📎 View File</a>` : '';
+
+          html += `<tr>
+            <td><strong>${t.empName}</strong></td>
+            <td><span style="background:#e9ecef; padding:3px 8px; border-radius:12px; font-size:12px;">${t.reportType}</span></td>
+            <td>${t.desc}</td>
+            <td style="${isOd ? 'color:#c0392b; font-weight:bold;' : ''}">${t.targetDate}</td>
+            <td style="${isOd ? 'color:#c0392b; font-weight:bold;' : 'color:#d35400; font-weight:bold;'}">${statusText}</td>
+            <td>${actionHtml} <div style="font-size:12px; color:#666; margin-top:5px;">${t.remarks || ''}</div> ${attachmentHtml}</td>
+          </tr>`;
+      });
+      
+      tbody.innerHTML = html === "" ? `<tr><td colspan="6" style="text-align:center;">No active tasks match this criteria.</td></tr>` : html;
+    }
+
     function openModal(txnId, empName, taskDesc, currentStatus, currentRemarks) {
-      document.getElementById("modalTxnId").value = txnId; document.getElementById("modalEmpName").innerText = empName; document.getElementById("modalTaskDesc").innerText = taskDesc;
-      document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; document.getElementById("modalRemarks").value = currentRemarks || "";
+      document.getElementById("modalTxnId").value = txnId; 
+      document.getElementById("modalEmpName").innerText = empName; 
+      document.getElementById("modalTaskDesc").innerText = taskDesc;
+      document.getElementById("modalStatus").value = currentStatus === 'Pending' ? 'Completed' : currentStatus; 
+      document.getElementById("modalRemarks").value = currentRemarks || "";
       document.getElementById("modalAttachment").value = ""; 
       document.getElementById("taskModal").style.display = "flex";
     }
@@ -246,7 +365,10 @@
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "updateTask", updateData: updateData }) });
         const result = await res.json();
-        if(result.success) { closeModal(); await fetchDepartmentData(); } else { alert("Update Failed: " + result.message); }
+        if(result.success) { 
+          closeModal(); 
+          await fetchDepartmentData(); // Auto re-renders active view
+        } else { alert("Update Failed: " + result.message); }
       } catch (error) { alert("System Error. Check your connection."); } finally { btn.innerText = "Confirm & Save Update"; btn.disabled = false; }
     }
     
