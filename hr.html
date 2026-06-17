@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     body { font-family: 'Roboto', sans-serif; margin: 0; display: flex; background-color: #f4f7f6; height: 100vh; overflow: hidden; }
@@ -83,6 +84,22 @@
     .dept-header h4 { margin: 0; color: #2c3e50; font-size: 16px; font-weight: 600; }
     .dept-stats { display: flex; gap: 10px; font-size: 12px; }
     .dept-stat-badge { padding: 5px 10px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); }
+    .next-gen-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .kpi-card { display: flex; align-items: center; padding: 20px; border-radius: 12px; color: white; box-shadow: 0 8px 15px rgba(0,0,0,0.1); transition: transform 0.3s; }
+    .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.15); }
+    .kpi-icon { font-size: 28px; margin-right: 15px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+    .kpi-details h3 { margin: 0; font-size: 12px; font-weight: 500; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px;}
+    .kpi-details h2 { margin: 5px 0 0; font-size: 26px; font-weight: 700; }
+    
+    .glass-blue { background: linear-gradient(135deg, #2c3e50, #3498db); }
+    .glass-red { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+    .glass-orange { background: linear-gradient(135deg, #d35400, #f39c12); }
+    .glass-purple { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+    .glass-green { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 25px; }
+    .chart-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eef2f5;}
+    .chart-container h3 { margin-top: 0; font-size: 15px; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;}
   </style>
 </head>
 <body>
@@ -109,31 +126,99 @@
     <div id="sec-dashboard" class="section active">
       <div class="section-header">
         <h2>System Analytics Dashboard</h2>
-        <button class="btn btn-export" onclick="loadDashboardData()" style="padding: 6px 12px;">🔄 Refresh Data</button>
+        <button class="btn btn-export" onclick="loadDashboardData()" style="padding: 8px 15px; background: #2c3e50; border-radius: 20px;">🔄 Refresh Dashboard</button>
       </div>
       
-      <div class="dashboard-cards">
-        <div class="stat-card" style="border-color: #3498db;"><h3>Total Employees</h3><p class="value" id="dash-tot-emp">...</p></div>
-        <div class="stat-card" style="border-color: #2ecc71;"><h3>Active Staff</h3><p class="value" id="dash-act-emp">...</p></div>
-        <div class="stat-card" style="border-color: #9b59b6;"><h3>Total Tasks</h3><p class="value" id="dash-tot-task">...</p></div>
-        <div class="stat-card" style="border-color: #e67e22;"><h3>Pending Tasks</h3><p class="value" id="dash-pen-task">...</p></div>
-        <div class="stat-card" style="border-color: #27ae60;"><h3>Completed</h3><p class="value" id="dash-com-task">...</p></div>
+      <div class="next-gen-kpis">
+        <div class="kpi-card glass-blue">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-details"><h3>Total Tasks</h3><h2 id="dash-tot-task">...</h2></div>
+        </div>
+        <div class="kpi-card glass-red">
+          <div class="kpi-icon">⚠️</div>
+          <div class="kpi-details"><h3>Overdue Tasks</h3><h2 id="dash-od-task">...</h2></div>
+        </div>
+        <div class="kpi-card glass-orange">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-details"><h3>Pending</h3><h2 id="dash-pen-task">...</h2></div>
+        </div>
+        <div class="kpi-card glass-purple">
+          <div class="kpi-icon">📅</div>
+          <div class="kpi-details"><h3>Upcoming</h3><h2 id="dash-up-task">...</h2></div>
+        </div>
+        <div class="kpi-card glass-green">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-details"><h3>Completed</h3><h2 id="dash-com-task">...</h2></div>
+        </div>
       </div>
 
-      <div class="form-grid">
-        <div class="card" style="margin-bottom:0;">
-          <h3 style="margin-top:0; color:#333;">Task Bottlenecks (Pending by Dept)</h3>
-          <table>
-            <thead><tr><th>Department</th><th>Pending Tasks</th></tr></thead>
-            <tbody id="dash-dept-pending"><tr><td colspan="2" style="text-align: center;">Loading...</td></tr></tbody>
+      <div class="dashboard-grid">
+        <div class="chart-container">
+          <h3>Task Status Distribution</h3>
+          <div style="position: relative; height: 280px; width: 100%;">
+            <canvas id="taskStatusChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h3>Department Bottlenecks (Pending vs Overdue)</h3>
+          <div style="position: relative; height: 280px; width: 100%;">
+            <canvas id="deptBottleneckChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+          <h3 style="margin:0; font-size: 18px; color: #2c3e50;">Active Pending Tasks Control Room</h3>
+          <div class="toggle-btn-group" style="background: #eef2f5;">
+            <button class="toggle-btn active" id="btn-pendChart" onclick="togglePendingView('chart')">📈 Analytics View</button>
+            <button class="toggle-btn" id="btn-pendTable" onclick="togglePendingView('table')">📋 List View</button>
+          </div>
+        </div>
+        
+        <div class="filter-bar" style="background: #fdfdfd; border: 1px solid #eee; margin-bottom: 20px;">
+          <div class="form-group" style="margin-bottom:0; flex:1;"><label>Filter by Employee</label><select id="dashPendEmp" onchange="renderPendingControl()"><option value="All">All Employees</option></select></div>
+          <div class="form-group" style="margin-bottom:0; flex:1;"><label>Filter by Department</label><select id="dashPendDept" onchange="renderPendingControl()"><option value="All">All Departments</option><option value="IT">IT</option><option value="Accounts">Accounts</option><option value="Admin">Admin</option><option value="Compliance">Compliance</option><option value="HR">HR</option></select></div>
+          <div class="form-group" style="margin-bottom:0; flex:1;"><label>Process Type</label><select id="dashPendType" onchange="renderPendingControl()"><option value="All">All Types</option><option value="Entry">Onboarding (Entry)</option><option value="Exit">Offboarding (Exit)</option></select></div>
+        </div>
+
+        <div id="pendingChartArea" style="position: relative; height: 320px; width: 100%;">
+          <canvas id="pendingMainChart"></canvas>
+        </div>
+        
+        <div id="pendingTableArea" style="display:none; overflow-y: auto; max-height: 320px; border: 1px solid #eee; border-radius: 6px;">
+          <table style="margin-top: 0; border: none;">
+            <thead style="position: sticky; top: 0; background: #2c3e50; z-index: 1;"><tr><th style="color:white;">Employee</th><th style="color:white;">Department</th><th style="color:white;">Type</th><th style="color:white;">Target Date</th><th style="color:white;">Status</th></tr></thead>
+            <tbody id="dashPendTableBody"></tbody>
           </table>
         </div>
-        <div class="card" style="margin-bottom:0;">
-          <h3 style="margin-top:0; color:#333;">Employee Distribution</h3>
-          <table>
-            <thead><tr><th>Department</th><th>Headcount</th></tr></thead>
-            <tbody id="dash-dept-emp"><tr><td colspan="2" style="text-align: center;">Loading...</td></tr></tbody>
-          </table>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+        <div class="chart-container">
+          <h3>Overdue Task Breakdown</h3>
+          <div style="position: relative; height: 220px; width: 100%;"><canvas id="overdueChart"></canvas></div>
+        </div>
+        <div class="chart-container">
+          <h3>Completed Task Quality (TAT)</h3>
+          <div style="position: relative; height: 220px; width: 100%;"><canvas id="completedChart"></canvas></div>
+        </div>
+        <div class="chart-container">
+          <h3>Upcoming Tasks Timeline</h3>
+          <div style="position: relative; height: 220px; width: 100%;"><canvas id="upcomingChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="stat-card" style="border-color: #3498db; padding: 15px;"><h3>Total Employees</h3><p class="value" id="dash-tot-emp">...</p></div>
+        <div class="stat-card" style="border-color: #2ecc71; padding: 15px;"><h3>Active Staff</h3><p class="value" id="dash-act-emp">...</p></div>
+        <div class="card" style="padding: 15px; margin-bottom: 0;">
+          <h3 style="margin-top:0; font-size:14px; color:#333; border-bottom: 1px solid #eee; padding-bottom:8px;">Employee Distribution</h3>
+          <div style="max-height: 120px; overflow-y: auto;">
+            <table style="margin-top:0;">
+              <tbody id="dash-dept-emp"><tr><td style="text-align: center;">Loading...</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -423,34 +508,200 @@
     let globalDepartmentTasks = []; 
     let globalTrackerTasks = []; 
 
+    // Global Chart Instances
+    let statusChart = null;
+    let bottleneckChart = null;
+
+    // Global Dashboard Chart Variables
+    let pendingMainChart = null;
+    let overdueChart = null;
+    let completedChart = null;
+    let upcomingChart = null;
+    let globalPendingTasksList = [];
+
+    
+
     async function loadDashboardData() {
       try {
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getAnalytics" }) });
         const result = await res.json();
+        
         if (result.success) {
           const data = result.data;
+          
+          // Basic Stats Update
           document.getElementById("dash-tot-emp").innerText = data.employeeStats.total;
           document.getElementById("dash-act-emp").innerText = data.employeeStats.active;
           document.getElementById("dash-tot-task").innerText = data.taskStats.total;
+          document.getElementById("dash-od-task").innerText = data.taskStats.overdue;
           document.getElementById("dash-pen-task").innerText = data.taskStats.pending;
+          document.getElementById("dash-up-task").innerText = data.taskStats.upcoming;
           document.getElementById("dash-com-task").innerText = data.taskStats.completed;
 
-          let pendingHtml = "";
-          for(const [dept, count] of Object.entries(data.taskStats.pendingByDepartment)) {
-             pendingHtml += `<tr><td><strong>${dept}</strong></td><td style="color:#e74c3c; font-weight:bold;">${count}</td></tr>`;
-          }
-          document.getElementById("dash-dept-pending").innerHTML = pendingHtml || '<tr><td colspan="2" style="text-align:center;">No pending tasks!</td></tr>';
-
+          // Department Employee List
           let empHtml = "";
           for(const [dept, count] of Object.entries(data.employeeStats.byDepartment)) {
-             empHtml += `<tr><td><strong>${dept}</strong></td><td>${count}</td></tr>`;
+             empHtml += `<tr><td style="padding: 5px 12px; font-size:13px;"><strong>${dept}</strong></td><td style="padding: 5px 12px; font-size:13px;">${count}</td></tr>`;
           }
-          document.getElementById("dash-dept-emp").innerHTML = empHtml || '<tr><td colspan="2" style="text-align:center;">No data found</td></tr>';
+          document.getElementById("dash-dept-emp").innerHTML = empHtml || '<tr><td colspan="2" style="text-align:center;">No data</td></tr>';
+
+          // --- 1. RESTORED: Old Doughnut Chart (Task Status) ---
+          if(statusChart) statusChart.destroy();
+          const ctxStatus = document.getElementById('taskStatusChart').getContext('2d');
+          statusChart = new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+              labels: ['Completed', 'Pending (On Track)', 'Overdue'],
+              datasets: [{
+                data: [
+                  data.taskStats.completed, 
+                  data.taskStats.pending - data.taskStats.overdueBreakdown.pending, // Pending that are NOT overdue
+                  data.taskStats.overdueBreakdown.pending
+                ],
+                backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c'],
+                borderWidth: 0, hoverOffset: 5
+              }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
+          });
+
+          // --- 2. RESTORED: Old Bar Chart (Department Bottlenecks) ---
+          if(bottleneckChart) bottleneckChart.destroy();
+          const departments = Object.keys(data.taskStats.pendingByDepartment);
+          const pendingData = [];
+          const overdueData = [];
+          
+          departments.forEach(dept => {
+            pendingData.push(data.taskStats.pendingByDepartment[dept] || 0);
+            overdueData.push(data.taskStats.overdueByDepartment[dept] || 0);
+          });
+
+          const ctxBottleneck = document.getElementById('deptBottleneckChart').getContext('2d');
+          bottleneckChart = new Chart(ctxBottleneck, {
+            type: 'bar',
+            data: {
+              labels: departments,
+              datasets: [
+                { label: 'Total Pending', data: pendingData, backgroundColor: '#f39c12', borderRadius: 4 },
+                { label: 'Overdue Tasks (Critical)', data: overdueData, backgroundColor: '#e74c3c', borderRadius: 4 }
+              ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+          });
+
+          // --- Assign Global Pending List & Populate Dropdown for NEW Charts ---
+          globalPendingTasksList = data.taskStats.pendingTasksList;
+          let empSet = new Set(globalPendingTasksList.map(t => t.empName));
+          let empOpts = '<option value="All">All Employees</option>';
+          empSet.forEach(emp => { empOpts += `<option value="${emp}">${emp}</option>`; });
+          document.getElementById("dashPendEmp").innerHTML = empOpts;
+
+          // Render Main Pending Control Room
+          renderPendingControl();
+
+          // Render Sub-Charts
+          renderSubCharts(data.taskStats);
         }
-      } catch (e) {
-        console.error("Error loading dashboard data", e);
+      } catch (e) { console.error("Dashboard Load Error:", e); }
+    }
+
+    // Toggle Pending Area View
+    function togglePendingView(view) {
+      document.getElementById('btn-pendChart').classList.remove('active');
+      document.getElementById('btn-pendTable').classList.remove('active');
+      if(view === 'chart') {
+        document.getElementById('pendingChartArea').style.display = 'block';
+        document.getElementById('pendingTableArea').style.display = 'none';
+        document.getElementById('btn-pendChart').classList.add('active');
+      } else {
+        document.getElementById('pendingChartArea').style.display = 'none';
+        document.getElementById('pendingTableArea').style.display = 'block';
+        document.getElementById('btn-pendTable').classList.add('active');
       }
     }
+
+    // Main Filter & Render Engine for Pending Tasks
+    function renderPendingControl() {
+      const filterEmp = document.getElementById("dashPendEmp").value;
+      const filterDept = document.getElementById("dashPendDept").value;
+      const filterType = document.getElementById("dashPendType").value;
+
+      let filtered = globalPendingTasksList.filter(t => {
+        return (filterEmp === "All" || t.empName === filterEmp) &&
+               (filterDept === "All" || t.dept === filterDept) &&
+               (filterType === "All" || t.reportType === filterType);
+      });
+
+      // Populate Table
+      let tableHtml = "";
+      let chartDataMap = {};
+
+      filtered.forEach(t => {
+        let statusHtml = t.isOverdue ? '<span style="color:#c0392b; font-weight:bold;">Overdue</span>' : '<span style="color:#f39c12; font-weight:bold;">On Track</span>';
+        tableHtml += `<tr><td><strong>${t.empName}</strong></td><td>${t.dept}</td><td>${t.reportType}</td><td>${t.targetDate}</td><td>${statusHtml}</td></tr>`;
+        
+        // Group by Dept for Chart
+        chartDataMap[t.dept] = (chartDataMap[t.dept] || 0) + 1;
+      });
+
+      document.getElementById("dashPendTableBody").innerHTML = tableHtml || '<tr><td colspan="5" style="text-align:center;">No pending tasks match criteria</td></tr>';
+
+      // Draw Main Pending Chart
+      if(pendingMainChart) pendingMainChart.destroy();
+      const ctxMain = document.getElementById('pendingMainChart').getContext('2d');
+      pendingMainChart = new Chart(ctxMain, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(chartDataMap),
+          datasets: [{ label: 'Active Pending Tasks', data: Object.values(chartDataMap), backgroundColor: '#3498db', borderRadius: 6 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+      });
+    }
+
+    // Render Sub-Charts (Overdue, Completed, Upcoming)
+    function renderSubCharts(stats) {
+      if(overdueChart) overdueChart.destroy();
+      if(completedChart) completedChart.destroy();
+      if(upcomingChart) upcomingChart.destroy();
+
+      // 1. Overdue Breakdown (Doughnut)
+      const ctxOD = document.getElementById('overdueChart').getContext('2d');
+      overdueChart = new Chart(ctxOD, {
+        type: 'doughnut',
+        data: {
+          labels: ['Pending Overdue', 'Completed Overdue'],
+          datasets: [{ data: [stats.overdueBreakdown.pending, stats.overdueBreakdown.completed], backgroundColor: ['#e74c3c', '#e67e22'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+      });
+
+      // 2. Completed TAT Breakdown (Doughnut)
+      const ctxComp = document.getElementById('completedChart').getContext('2d');
+      completedChart = new Chart(ctxComp, {
+        type: 'doughnut',
+        data: {
+          labels: ['On Time (In TAT)', 'Completed Overdue'],
+          datasets: [{ data: [stats.completedBreakdown.inTAT, stats.completedBreakdown.overdue], backgroundColor: ['#27ae60', '#c0392b'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+      });
+
+      // 3. Upcoming Timeline (Bar Chart)
+      const upKeys = Object.keys(stats.upcomingBreakdown);
+      const upValues = Object.values(stats.upcomingBreakdown);
+      const ctxUp = document.getElementById('upcomingChart').getContext('2d');
+      upcomingChart = new Chart(ctxUp, {
+        type: 'bar',
+        data: {
+          labels: upKeys,
+          datasets: [{ label: 'Tasks', data: upValues, backgroundColor: '#8e44ad', borderRadius: 4 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+      });
+    }
+
+
 
     async function loadHodList() {
       const hodSelect = document.getElementById("empHod");
@@ -764,6 +1015,8 @@
       if(filtered.length === 0) { alert("No data match the current filters!"); return; }
 
       let processTypes = [...new Set(filtered.map(t => t.reportType))].join(' & ');
+      
+      // Update stats to include Overdue details precisely
       let overall = { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 };
       let deptData = {};
       
@@ -779,14 +1032,15 @@
         }
 
         if (!deptData[t.dept]) {
-          deptData[t.dept] = { total: 0, completed: 0, pending: 0, overdue: 0 };
+          deptData[t.dept] = { total: 0, completed: 0, pending: 0, overdueCompleted: 0, overduePending: 0 };
         }
         deptData[t.dept].total++;
         if (t.status === 'Completed') {
           deptData[t.dept].completed++;
+          if(isOd) deptData[t.dept].overdueCompleted++;
         } else {
           deptData[t.dept].pending++;
-          if(isOd) deptData[t.dept].overdue++;
+          if(isOd) deptData[t.dept].overduePending++;
         }
       });
 
@@ -808,34 +1062,83 @@
       doc.text(`HOD Name: ${empInfo.hod || '-'}`, 105, 35);
 
       doc.setFont("helvetica", "bold");
-      doc.text("Overall Task Summary:", 14, 45);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Total: ${overall.total}   |   Done: ${overall.completed}   |   Pending: ${overall.pending}   |   Overdue: ${overall.overduePending + overall.overdueCompleted}`, 14, 52);
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Department-wise Summary:", 14, 62);
-      doc.setFont("helvetica", "normal");
-
-      let yPos = 69;
-      const sortedDepts = Object.keys(deptData).sort();
+      doc.text("Department-wise Task Summary:", 14, 45);
       
+      let yPos = 50;
+      const sortedDepts = Object.keys(deptData).sort();
+      let summaryBody = [];
+      
+      // Populate Summary Body array
       sortedDepts.forEach(deptName => {
         const d = deptData[deptName];
-        doc.text(`${deptName}:  Total: ${d.total}  |  Done: ${d.completed}  |  Pending: ${d.pending}  |  Overdue: ${d.overdue}`, 14, yPos);
-        yPos += 6; 
+        summaryBody.push([
+          deptName, 
+          d.total.toString(), 
+          d.pending.toString(), 
+          d.completed.toString(), 
+          d.overduePending.toString(), 
+          d.overdueCompleted.toString()
+        ]);
       });
 
-      yPos += 2;
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.5);
-      doc.line(14, yPos, 196, yPos);
-      yPos += 4;
+      // Add Grand Total Row
+      summaryBody.push([
+        "GRAND TOTAL",
+        overall.total.toString(),
+        overall.pending.toString(),
+        overall.completed.toString(),
+        overall.overduePending.toString(),
+        overall.overdueCompleted.toString()
+      ]);
 
+      // Render Summary Table in PDF
+      doc.autoTable({
+        startY: yPos,
+        head: [['Department', 'Total Tasks', 'Pending', 'Completed', 'Overdue (Pending)', 'Overdue (Completed)']],
+        body: summaryBody,
+        theme: 'grid',
+        headStyles: { fillColor: [44, 62, 80] },
+        styles: { fontSize: 9 },
+        willDrawCell: function(data) {
+          // Make Grand Total row bold and grey background
+          if (data.row.index === summaryBody.length - 1) {
+            doc.setFont("helvetica", "bold");
+            if(data.section === 'body') data.cell.styles.fillColor = [240, 244, 248];
+          } else {
+            doc.setFont("helvetica", "normal");
+          }
+          
+          // Apply Colors for Pending, Completed, Overdue numbers
+          if(data.section === 'body') {
+             if (data.column.index === 2) data.cell.styles.textColor = [211, 84, 0]; // Pending Orange
+             if (data.column.index === 3) data.cell.styles.textColor = [39, 174, 96]; // Completed Green
+             if (data.column.index === 4 || data.column.index === 5) data.cell.styles.textColor = [192, 57, 43]; // Overdue Red
+          }
+        }
+      });
+
+      yPos = doc.lastAutoTable.finalY + 10;
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Detailed Task Breakdown:", 14, yPos);
+      yPos += 5;
+
+      // Render Detailed Tasks Table in PDF
       doc.autoTable({
         html: '#pdfTasksTable',
         startY: yPos,
+        theme: 'grid',
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [44, 62, 80] }
+        headStyles: { fillColor: [44, 62, 80] },
+        didParseCell: function(data) {
+           // Colorize the Status column in detailed view
+           if(data.section === 'body' && data.column.index === 3) {
+              let txt = data.cell.text[0] || "";
+              if(txt === 'Completed') data.cell.styles.textColor = [39, 174, 96];
+              else if(txt.includes('Overdue')) data.cell.styles.textColor = [192, 57, 43];
+              else data.cell.styles.textColor = [211, 84, 0];
+           }
+        }
       });
 
       doc.save(empName.replace(/[^a-zA-Z0-9]/g, "_") + "_Tasks.pdf");
